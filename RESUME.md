@@ -2,8 +2,8 @@
 
 ## Right Now
 **Phase:** Phase 1 - Foundation Setup
-**Last:** Syncthing + LocalSend installed on dev server (10.0.10.21), SSH key auth configured (2026-02-08)
-**Next:** Install Syncthing on desktop (sync with dev server), verify Cloudflare Tunnel SSH from phone
+**Last:** Syncthing + LocalSend installed on dev server, Syncthing installed on desktop (not yet enabled/paired), all docs updated for iOS + dev server hub (2026-02-08)
+**Next:** Enable Syncthing on desktop and pair with dev server, verify Cloudflare Tunnel SSH from phone, test LocalSend from iPhone to dev server
 **Blocked:** Nothing
 
 ## Quick Context
@@ -40,6 +40,6 @@
 - [x] SSH key auth to dev server (10.0.10.21)
 - [x] Syncthing on dev server (systemd service)
 - [x] LocalSend on dev server (headless, systemd service)
-- [ ] Install Syncthing on desktop (sync with dev server)
+- [ ] Enable Syncthing on desktop and pair with dev server (installed, not yet enabled)
 - [ ] Verify Cloudflare Tunnel SSH from phone
 - [ ] Create Telegram bot via @BotFather (Phase 2)

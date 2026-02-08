@@ -49,7 +49,7 @@ Setting up MCP servers, credentials, and mobile tools so that all Precept projec
 | Task | Status | Notes |
 |------|--------|-------|
 | Verify Cloudflare Tunnel SSH route | TODO | Phase 1: confirm SSH access from phone via existing tunnel |
-| Install Syncthing on desktop | TODO | Phase 1: sync with dev server (for non-git files) |
+| Enable Syncthing on desktop + pair with dev server | TODO | Phase 1: installed via pacman, needs `systemctl --user enable --now syncthing` + pairing (dev server ID: IAXNI7E-...-HCWWJAV) |
 | Build Telegram bot (Phase 2) | TODO | Clone claude-telegram-bridge, deploy on dev server |
 | Template integration (Phase 2) | TODO | Add slash commands, project.yml schema |
 
