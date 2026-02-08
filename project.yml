@@ -1,0 +1,13 @@
+# project.yml -- Machine-readable project metadata
+# Internal project -- no client or billing sections.
+
+project:
+  name: "Precept Workflow"
+  slug: "precept-workflow"
+  type: "internal"
+  status: "active"
+  created: "2026-02-08"
+
+repo:
+  github: "jasonvanwyk/precept-workflow"
+  branch: "main"
