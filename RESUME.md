@@ -2,19 +2,23 @@
 
 ## Right Now
 **Phase:** Phase 1 - Foundation Setup
-**Last:** Created dedicated precept-workflow project, moved all files (2026-02-08)
-**Next:** Jason completes manual credential setup (Google OAuth, GitHub PAT, Telegram)
+**Last:** Project scaffolded, pushed to GitHub, started setup checklist (2026-02-08)
+**Next:** Google Cloud OAuth setup (Step 1 of checklist -- see docs/manual.md Section 3.1)
 **Blocked:** All MCP testing blocked on credentials
 
 ## Quick Context
 - Internal tooling project for Precept Systems
 - Connects Claude Code to Google Workspace, GitHub, Telegram via MCP servers
 - Mobile workflow via Telegram bot + Syncthing + Tailscale
-- Status: Strategy complete, implementation barely started
+- Prerequisites confirmed: uvx, npx, gh all installed; ~/.config/precept/ created
+- Setup checklist is in docs/manual.md -- work through Section 3 step by step
 
 ## Recent Progress
 - Moved strategy docs and research into dedicated project
 - Created practical manual (docs/manual.md)
+- Pushed to GitHub (jasonvanwyk/precept-workflow)
+- Confirmed prerequisites (uvx 0.9.9, npx/node 25.1.0, gh 2.86.0)
+- Created ~/.config/precept/ directory (chmod 700)
 
 ## Key Files
 - `STATUS.md` - Full project tracking

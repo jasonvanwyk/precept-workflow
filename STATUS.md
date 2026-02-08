@@ -24,6 +24,9 @@ Setting up MCP servers, credentials, and mobile tools so that all Precept projec
 | Write integration strategy synthesis | 2026-02-07 | See docs/integration-strategy-synthesis.md |
 | Add MCP config to ~/.claude.json | 2026-02-07 | 3 of 4 servers (google-workspace, github, fetch) |
 | Create dedicated precept-workflow project | 2026-02-08 | Moved scattered files into one place |
+| Write setup manual (docs/manual.md) | 2026-02-08 | Setup checklist + usage guide |
+| Push to GitHub | 2026-02-08 | git@github.com:jasonvanwyk/precept-workflow.git |
+| Verify prerequisites (uvx, npx, gh) | 2026-02-08 | All installed, ~/.config/precept/ created |
 
 ### In Progress
 
