@@ -243,8 +243,9 @@ All share the same Google Cloud OAuth credentials.
 
 ### Data Flow: Phone to Project Folders
 
+**Via Telegram Bot (primary -- per-project routing):**
 ```
-Phone (Telegram)                Desktop (Bot Service)
+iPhone (Telegram)               Dev Server (Bot Service, 10.0.10.21)
                                          |
 +-- Send photo -----> Bot receives ----> Save to ~/Projects/{project}/pics/
 |   with caption      file_id            YYYY-MM-DD-{caption}.jpg
@@ -262,19 +263,30 @@ Phone (Telegram)                Desktop (Bot Service)
                       project file       Send content to Telegram
 ```
 
+**Via LocalSend (bulk transfers):**
+```
+iPhone (LocalSend)              Dev Server (LocalSend, 10.0.10.21:53317)
+                                         |
++-- Send batch -----> LocalSend   ----> ~/incoming-photos/
+    of photos         receives           Dev server script processes:
+                      files via WiFi     prompt for project, rename,
+                                         move to ~/Projects/{project}/pics/
+                                         git add + git commit
+```
+
 ### Hosting Decision
 
-**Decision: Proxmox LXC container, accessible via Cloudflare Tunnel.**
+**Decision: Dev server (10.0.10.21, VM 105 "ubuntu-gen" on Proxmox "pve"), accessible via Cloudflare Tunnel.**
 
 | Option | Verdict | Reason |
 |--------|---------|--------|
-| **Proxmox LXC** | **USE THIS** | Always-on (survives desktop reboots), isolated environment, Jason already runs 2x Proxmox servers |
+| **Dev server (Proxmox VM)** | **USE THIS** | Always-on (survives desktop reboots), central hub for all services, Jason already runs Proxmox |
 | Desktop + systemd | Fallback | Direct filesystem access, but tied to desktop uptime |
 | VPS | Not needed | Adds cost; Jason already has equivalent infrastructure with Proxmox + Cloudflare Tunnel |
 
-**Polling mode** eliminates the need for a public IP or webhook endpoint. The bot simply calls out to Telegram servers. Running in a Proxmox LXC container means the bot stays up even when the desktop is off or being rebooted.
+**Polling mode** eliminates the need for a public IP or webhook endpoint. The bot simply calls out to Telegram servers. Running on the dev server means the bot stays up even when the desktop is off or being rebooted.
 
-The bot accesses ~/Projects/ via an NFS/SMB mount or Syncthing share from the desktop, or the projects are cloned directly into the container.
+Project files are cloned from GitHub (the source of truth) directly onto the dev server. The desktop also pulls from GitHub for Claude Code work and pushes back when done.
 
 ### Estimated Costs
 
@@ -292,21 +304,24 @@ The bot accesses ~/Projects/ via an NFS/SMB mount or Syncthing share from the de
 
 ### Photo Pipeline
 
-```
-CAPTURE              SYNC                 PROCESS              FILE
-Phone camera  --->   Syncthing     --->   Desktop script  ---> ~/Projects/{project}/pics/
-(normal photos)      (WiFi-only,          (prompt for           YYYY-MM-DD-description.jpg
-                      peer-to-peer)        project, rename)     git add + git commit
-```
-
-**OR via Telegram Bot (preferred for per-project routing):**
+**Primary: Telegram Bot (per-project routing with captions):**
 ```
 Phone Telegram  ---> Bot receives  --->  Save directly to ---> git commit
 "fairfield panel"    photo + caption     ~/Projects/fairfield-water/pics/
                                          2026-02-07-panel.jpg
 ```
 
-**Current problem** (visible in `jenkins-network/pics/`): Photos arrive as UUID filenames, "WhatsApp Image" timestamps, "unnamed (1).jpg", and `IMG_4776.HEIC`. The Telegram bot solves this by requiring a caption that becomes the filename.
+**Bulk: LocalSend to dev server (for large batches of photos/files):**
+```
+CAPTURE              TRANSFER             PROCESS              FILE
+iPhone camera  --->  LocalSend     --->   Dev server script -> ~/Projects/{project}/pics/
+(bulk photos)        (WiFi, direct to     (prompt for           YYYY-MM-DD-description.jpg
+                      dev server           project, rename)     git add + git commit
+                      10.0.10.21:53317)
+                      ~/incoming-photos/
+```
+
+**Current problem** (visible in `jenkins-network/pics/`): Photos arrive as UUID filenames, "WhatsApp Image" timestamps, "unnamed (1).jpg", and `IMG_4776.HEIC`. The Telegram bot solves this by requiring a caption that becomes the filename. For bulk transfers where individual captioning is impractical, LocalSend delivers files to the dev server's `~/incoming-photos/` directory for batch processing.
 
 ### Voice Notes Pipeline
 
@@ -314,24 +329,26 @@ Phone Telegram  ---> Bot receives  --->  Save directly to ---> git commit
 RECORD               SYNC/SEND            TRANSCRIBE           FILE
 Phone voice    --->   Telegram Bot  --->   Whisper API    ---> ~/Projects/{project}/
 recorder or           (sends OGG           ($0.006/min)         correspondence/
-Telegram voice        to desktop)                               YYYY-MM-DD_voice-note.md
+Telegram voice        to dev server)                            YYYY-MM-DD_voice-note.md
                                                                 git add + git commit
 ```
 
-**Alternative for offline**: Use phone's voice recorder app. Files sync via Syncthing when on WiFi. Desktop script processes `.m4a`/`.ogg` files through Whisper and outputs `.md`.
+**Alternative for offline**: Use phone's voice recorder app. Transfer files via LocalSend to the dev server when on WiFi. Dev server script processes `.m4a`/`.ogg` files through Whisper and outputs `.md`.
 
 **Whisper model choice**: Use OpenAI Whisper API for simplicity ($0.006/min -- at 10 minutes of voice notes per site visit, that costs R1-2 per visit). Self-hosted `whisper.cpp` on desktop is free but slower without a GPU.
 
 ### WiFi Survey Data Pipeline
 
 ```
-CAPTURE              EXPORT               SYNC                 FILE
-WiFiAnalyzer   --->  CSV export    --->   Syncthing or   ---> ~/Projects/{project}/docs/
-(Android,             on phone            Telegram Bot          wifi-survey-YYYY-MM-DD.csv
-F-Droid, free)                            (send as file)        git add + git commit
+CAPTURE              EXPORT               TRANSFER             FILE
+iOS WiFi survey --->  CSV/screenshot --->  LocalSend or   ---> ~/Projects/{project}/docs/
+app or laptop-        export on phone      Telegram Bot          wifi-survey-YYYY-MM-DD.csv
+based survey                               (send as file)        git add + git commit
 ```
 
-Optional: Desktop script parses CSV into a markdown summary table for the project docs.
+> **Note:** WiFiAnalyzer is Android-only. On iOS, alternatives like Network Analyzer or WiFi Sweetspots provide basic survey data. For comprehensive WiFi surveys, use a laptop-based tool and transfer results via LocalSend to the dev server.
+
+Optional: Dev server script parses CSV into a markdown summary table for the project docs.
 
 ### On-Site Project File Access
 
@@ -349,27 +366,25 @@ From any client site, Jason can:
 - `git log --oneline -5` -- see recent work
 - Access Syncthing web UI remotely
 
-**Already in place**: Cloudflare Tunnel is configured and working (used for the Fairfield water monitoring app). Termius on Android as SSH client.
+**Already in place**: Cloudflare Tunnel is configured and working (used for the Fairfield water monitoring app). Termius on iOS as SSH client.
 
 ### Offline-First Considerations
 
 | Challenge | Solution |
 |-----------|----------|
-| No WiFi at client site | All capture is local-first. Syncthing queues until WiFi available. |
-| Expensive mobile data (R100-150/GB) | Syncthing: WiFi-only mode. FolderSync: restrict to home SSID. |
+| No WiFi at client site | All capture is local-first. LocalSend transfers queue until WiFi available. |
+| Expensive mobile data (R100-150/GB) | LocalSend: WiFi-only. Telegram bot: small payloads OK on mobile data. |
 | Load shedding kills desktop | Proxmox servers on UPS. Bot runs in LXC container, independent of desktop. |
-| HEIC photos from some devices | Desktop ingestion script runs `heif-convert` as part of pipeline. |
+| HEIC photos from iPhone | Dev server ingestion script runs `heif-convert` as part of pipeline. |
 | WhatsApp photos with terrible names | Route through Telegram bot instead, which enforces caption-based naming. |
 
-### Android App Stack
+### iOS App Stack
 
 | App | Source | Purpose | Cost |
 |-----|--------|---------|------|
-| **Telegram** | Play Store | Messaging bot interface | Free |
-| **Syncthing** | F-Droid | Peer-to-peer file sync | Free |
-| **Markor** | F-Droid | Markdown editor for on-site notes | Free |
-| **Termius** | Play Store | SSH client (via Cloudflare Tunnel) | Free tier |
-| **WiFiAnalyzer** | F-Droid | WiFi survey tool | Free |
+| **Telegram** | App Store | Primary mobile interface (bot for photo filing, voice transcription, status queries) | Free |
+| **LocalSend** | App Store | Bulk file/photo transfers to dev server | Free |
+| **Termius** | App Store | SSH client (via Cloudflare Tunnel) | Free tier |
 
 ---
 
@@ -384,74 +399,80 @@ From any client site, Jason can:
 |                                                                 |
 |  +------------------+    +----------------------------------+   |
 |  | Claude Code CLI  |    | ~/Projects/                      |   |
-|  |                  |    |   fairfield-water/                |   |
-|  |  MCP Servers:    |    |     CLAUDE.md, STATUS.md,        |   |
-|  |  - Google WS     |--->|     correspondence/, pics/,      |   |
-|  |  - GitHub        |    |     docs/                         |   |
-|  |  - Telegram      |    |   jenkins-network/               |   |
-|  +--------+---------+    |   jenny_henschel/                |   |
-|           |              |   ...                            |   |
-|  +--------+---------+    +------------------+---------------+   |
-|  | Gemini CLI       |                       |                   |
-|  | (alternative AI) |                       | NFS/Syncthing     |
-|  +------------------+                       |                   |
+|  |                  |    |   (pulled from GitHub,            |   |
+|  |  MCP Servers:    |    |    pushed back when done)         |   |
+|  |  - Google WS     |--->|   fairfield-water/                |   |
+|  |  - GitHub        |    |   jenkins-network/                |   |
+|  |  - Telegram      |    |   jenny_henschel/                |   |
+|  +--------+---------+    |   ...                            |   |
+|           |              +------------------+---------------+   |
+|  +--------+---------+                       |                   |
+|  | Gemini CLI       |                       | Syncthing         |
+|  | (alternative AI) |                       | (non-git file     |
+|  +------------------+                       |  sync if needed)  |
 |                                             |                   |
 |  +------------------+                       |                   |
 |  | Syncthing        |                       |                   |
-|  | (peer-to-peer)   |                       |                   |
-|  +--------+---------+                       |                   |
-|           |                                 |                   |
-+===========|=================================|===================+
-            |                                 |
-     WiFi sync                                |
-     (photos,                                 |
-      files)                                  |
-            |                                 |
-            |              +==================|===================+
-            |              | PROXMOX SERVERS (2x)                 |
-            |              |                                      |
-            |              |  +--------+--------+                 |
-            |              |  | LXC Container   |                 |
-            |              |  | Telegram Bot    |                 |
-            |              |  | - Photo filing  |                 |
-            |              |  | - Voice transcr |                 |
-            |              |  | - Status queries|                 |
-            |              |  +--------+--------+                 |
-            |              |           |                          |
-            |              |  Cloudflare Tunnel (already config)  |
-            |              |  - External access to services       |
-            |              |  - Hosts Fairfield water monitor app |
-            |              +===========|==========================+
-            |                          |
-            |                   Telegram API
-            |                   (polling mode)
-            |                          |
-+-----------+----------+  +------------+----------+
-| JASON'S ANDROID      |  | CLOUD SERVICES        |
-| PHONE                |  |                       |
-|                      |  | Telegram Servers      |
-| Telegram App --------+->| (free, message relay) |
-| Syncthing    --------+  |                       |
-| Markor (markdown)    |  | Google Workspace APIs |
-| Termius (SSH via CF) |  | (Gmail, Calendar,     |
-| WiFiAnalyzer         |  |  Drive, Docs, Sheets, |
-+-----------------------+  |  Slides)              |
-                          |                       |
-                          | GitHub API            |
-                          | (repos, issues, PRs)  |
-                          |                       |
-                          | Anthropic Claude API  |
-                          | (AI responses)        |
-                          |                       |
-                          | OpenAI Whisper API    |
-                          | (voice transcription) |
-                          |                       |
-                          | Cloudflare            |
-                          | (tunnel, DNS)         |
-                          |                       |
-                          | Odoo ERP              |
-                          | (quotes, invoices)    |
-                          +-----------------------+
+|  | (sync w/ dev svr)|                       |                   |
+|  +------------------+                       |                   |
+|                                             |                   |
++=============================================|===================+
+                                              |
+               +==============================|===================+
+               | DEV SERVER (10.0.10.21)                          |
+               | VM 105 "ubuntu-gen" on Proxmox "pve"             |
+               | ** CENTRAL HUB **                                |
+               |                                                  |
+               |  +------------------+  +---------------------+   |
+               |  | Telegram Bot     |  | LocalSend           |   |
+               |  | (Phase 2)        |  | (headless, systemd) |   |
+               |  | - Photo filing   |  | Port 53317          |   |
+               |  | - Voice transcr  |  | Receives bulk files |   |
+               |  | - Status queries |  | from iPhone         |   |
+               |  +--------+---------+  | ~/incoming-photos/  |   |
+               |           |            +---------------------+   |
+               |           |                                      |
+               |  +--------+---------+                            |
+               |  | ~/Projects/      |  Syncthing (sync w/        |
+               |  | (cloned from     |   desktop if needed)       |
+               |  |  GitHub -- source|                            |
+               |  |  of truth)       |                            |
+               |  +------------------+                            |
+               |                                                  |
+               |  Cloudflare Tunnel (already configured)          |
+               |  - External access to services                   |
+               |  - Hosts Fairfield water monitor app             |
+               +===========|======================================+
+                           |
+                    Telegram API
+                    (polling mode)
+                           |
++--------------------------+-----+  +-----------------------+
+| JASON'S iPHONE                 |  | CLOUD SERVICES        |
+|                                |  |                       |
+| Telegram App (primary) -------+->| Telegram Servers      |
+|   Per-project photo filing     |  | (free, message relay) |
+|   Voice transcription          |  |                       |
+|   Status queries               |  | Google Workspace APIs |
+|                                |  | (Gmail, Calendar,     |
+| LocalSend (bulk transfers) ---+->|  Drive, Docs, Sheets, |
+|   Bulk photos/files to         |  |  Slides)              |
+|   dev server                   |  |                       |
+|                                |  | GitHub API            |
+| Termius (SSH via CF Tunnel) ---|  | (repos, issues, PRs)  |
++---------------------------------+  |                       |
+                                    | Anthropic Claude API  |
+                                    | (AI responses)        |
+                                    |                       |
+                                    | OpenAI Whisper API    |
+                                    | (voice transcription) |
+                                    |                       |
+                                    | Cloudflare            |
+                                    | (tunnel, DNS)         |
+                                    |                       |
+                                    | Odoo ERP              |
+                                    | (quotes, invoices)    |
+                                    +-----------------------+
 ```
 
 ### Data Flow: Common Scenarios
@@ -510,11 +531,11 @@ AFTER (at desk):
 |-----------|---------|------------|---------------------|
 | Claude Code + MCP servers | Desktop | No -- on-demand | Internet (for API calls) |
 | Gemini CLI | Desktop | No -- on-demand | Internet |
-| Telegram Bot | Proxmox LXC | Yes (always-on) | Internet (polling) |
-| Syncthing | Desktop + Phone | Yes (background) | WiFi (peer-to-peer) |
-| Cloudflare Tunnel | Proxmox VM | Yes (always-on) | Internet |
-| Git/GitHub | Desktop | No -- on-demand | Internet (for push/pull) |
-| Markor | Phone | No -- on-demand | None (local files) |
+| Telegram Bot | Dev server (10.0.10.21) | Yes (always-on) | Internet (polling) |
+| LocalSend | Dev server (10.0.10.21) | Yes (systemd service, port 53317) | WiFi (receives from iPhone) |
+| Syncthing | Desktop + Dev server | Yes (background) | LAN (peer-to-peer) |
+| Cloudflare Tunnel | Dev server | Yes (always-on) | Internet |
+| Git/GitHub | Desktop + Dev server | No -- on-demand | Internet (for push/pull) |
 | Google Workspace APIs | Google Cloud | Always | Internet |
 | Anthropic Claude API | Anthropic Cloud | Always | Internet |
 | Whisper API | OpenAI Cloud | Always | Internet |
@@ -532,13 +553,13 @@ AFTER (at desk):
 | 1 | Install `uvx` (`pip install uv`) and add google-workspace MCP to `~/.claude.json` | 15 min | Free |
 | 1 | First-run OAuth authentication (browser popup) | 5 min | Free |
 | 1 | Test: read inbox, check calendar, list Drive files from Claude Code | 15 min | Free |
-| 2 | Configure Cloudflare Tunnel for SSH access (if not already routing to desktop/Proxmox) | 15 min | Free |
-| 2 | Install Termius on phone, test SSH via Cloudflare Tunnel | 10 min | Free |
-| 2 | Install Syncthing on desktop and phone, create `field-capture/` share folder (WiFi-only) | 20 min | Free |
+| 2 | Configure Cloudflare Tunnel for SSH access (if not already routing to dev server) | 15 min | Free |
+| 2 | Install Termius on iPhone (App Store), test SSH via Cloudflare Tunnel | 10 min | Free |
+| 2 | Set up Syncthing between desktop and dev server (10.0.10.21) for non-git file sync | 20 min | Free |
+| 2 | Set up LocalSend on dev server (headless, systemd service on 10.0.10.21:53317) | 15 min | Free |
+| 2 | Verify LocalSend on iPhone and desktop can send to dev server | 10 min | Free |
 | 2 | Create Telegram bot via @BotFather, note token | 5 min | Free |
 | 2 | Get Telegram API credentials from my.telegram.org, add Telegram MCP to `~/.claude.json` | 10 min | Free |
-| 3 | Install Markor on phone, point at Syncthing folder | 5 min | Free |
-| 3 | Install WiFiAnalyzer on phone (F-Droid) | 5 min | Free |
 | 3 | Install `gogcli` on desktop as CLI complement | 15 min | Free |
 
 **Phase 1 Total Cost: R0**
@@ -550,9 +571,10 @@ AFTER (at desk):
 |------|------|------|
 | Clone `claude-telegram-bridge`, configure with bot token + Claude API key + whitelisted user ID | 1 hour | Free |
 | Add custom handlers: photo filing with project routing, voice transcription | 3 hours | Free |
-| Deploy bot to Proxmox LXC container with auto-restart | 30 min | Free |
-| Create desktop script: process `field-capture/` folder (prompt for project, rename, move, commit) | 2 hours | Free |
-| Test full workflow: send photo from phone, verify it lands in correct project folder | 30 min | Free |
+| Deploy bot to dev server (10.0.10.21) with systemd auto-restart | 30 min | Free |
+| Create dev server script: process `~/incoming-photos/` from LocalSend (prompt for project, rename, move, commit) | 2 hours | Free |
+| Test full workflow: send photo from iPhone via Telegram bot, verify it lands in correct project folder | 30 min | Free |
+| Test bulk workflow: send batch of photos via LocalSend, verify they arrive in `~/incoming-photos/` on dev server | 15 min | Free |
 | Add `/project:import-email` slash command to templates (see Section 8) | 30 min | Free |
 | Install `gitwatch` for auto-committing incoming files | 30 min | Free |
 
@@ -714,9 +736,9 @@ Imported emails are saved to correspondence/ as:
 - Content: Markdown with date, from, to, subject header, then body
 
 ### Photo Filing Convention
-Photos received via Telegram bot or Syncthing are filed as:
+Photos received via Telegram bot or LocalSend are filed as:
 - Path: pics/YYYY-MM-DD-description.ext
-- Description comes from Telegram caption or manual entry
+- Description comes from Telegram caption or manual entry during batch processing
 - HEIC files are converted to JPEG during ingestion
 
 ### Voice Note Convention
@@ -736,11 +758,6 @@ correspondence/audio/
 *.m4a
 *.ogg
 *.opus
-
-# Syncthing metadata
-.stfolder/
-.stignore
-.stversions/
 ```
 
 ### Directory Structure Additions (client-project template only)
@@ -763,7 +780,7 @@ project-root/
 | `project.yml` schema | EXTEND | Add `integration:` section |
 | `AGENTS.md` template | EXTEND | Add integrations section |
 | `.claude/rules/precept-conventions.md` | EXTEND | Add integration conventions |
-| `.gitignore` | EXTEND | Add audio files, Syncthing metadata |
+| `.gitignore` | EXTEND | Add audio files |
 | `correspondence/audio/` | NEW (client-project) | Voice note originals directory |
 
 ---
@@ -775,8 +792,8 @@ project-root/
 | taylorwilsdon/google_workspace_mcp as Google MCP | ngs/google-mcp-server, Google official, MarkusPfundstein/mcp-gsuite, Composio | Most comprehensive (10 services), 1,300 stars, active development, Python/uvx fits the ecosystem |
 | Telegram over Signal for bot | Signal via signal-cli | Telegram: official Bot API, 2-minute setup, rich media handling, massive ecosystem. Signal: no official bot API, immature tooling. |
 | claude-telegram-bridge as starting point | claude-code-telegram, OpenClaw, custom build | Built-in vision + Whisper transcription + streaming. claude-code-telegram is a good fallback. OpenClaw is overkill for v1. |
-| Proxmox LXC for bot hosting | Desktop systemd, VPS, Raspberry Pi | Always-on (survives desktop reboots), Jason already runs 2x Proxmox servers, no additional cost. |
-| Syncthing for file sync | FolderSync, Google Drive, Dropbox, manual USB | Peer-to-peer (no cloud), free, WiFi-only mode, works offline. FolderSync Pro added in Phase 2 for per-project routing. |
+| Dev server as central hub | Desktop systemd, VPS, Raspberry Pi | Always-on (survives desktop reboots), runs Telegram bot + LocalSend + project clones, Jason already runs Proxmox, no additional cost. |
+| LocalSend for bulk phone transfers | Syncthing on phone, AirDrop, Google Drive, manual USB | Direct WiFi transfer to dev server, no cloud, free, works with iOS. Syncthing kept for desktop-to-dev-server sync only. |
 | Cloudflare Tunnel for remote access | Tailscale, WireGuard (manual), SSH port forwarding, ngrok | Already configured and working (hosts Fairfield water monitoring app), no subscription needed, no additional setup. |
 | Whisper API over self-hosted | Self-hosted whisper.cpp, on-device NotelyVoice, Google Speech-to-Text | API is simplest to start (R1-2 per site visit). Self-hosted added in Phase 3 if cost or privacy becomes a concern. |
 | 3 MCP servers initially | More servers, fewer servers | Sweet spot: Google Workspace + GitHub + Telegram cover 90% of use cases. Fetch, Filesystem, and Desktop Commander are redundant with Claude Code built-ins. |
@@ -800,7 +817,7 @@ pip install gcalcli                     # Calendar CLI
 # himalaya: install from AUR or GitHub releases
 
 # Sync and automation
-sudo pacman -S syncthing                # File sync daemon
+sudo pacman -S syncthing                # File sync with dev server (not phone)
 sudo pacman -S inotify-tools            # For gitwatch/file watchers
 pip install gitwatch                    # Auto-commit on file changes
 
@@ -808,15 +825,13 @@ pip install gitwatch                    # Auto-commit on file changes
 # No additional VPN software needed
 ```
 
-### Phone (Android)
+### Phone (iPhone)
 
-| App | Install From |
-|-----|-------------|
-| Telegram | Play Store |
-| Syncthing | F-Droid |
-| Markor | F-Droid |
-| Termius | Play Store |
-| WiFiAnalyzer | F-Droid |
+| App | Install From | Purpose |
+|-----|-------------|---------|
+| Telegram | App Store | Primary mobile interface (bot for photo filing, voice transcription, status queries) |
+| LocalSend | App Store | Bulk file/photo transfers to dev server |
+| Termius | App Store | SSH client (via Cloudflare Tunnel) |
 
 ### Environment Variables (~/.bashrc)
 
@@ -852,6 +867,7 @@ export OPENAI_API_KEY="sk-..."
 | Google Workspace MCP tokens | `~/.config/workspace-mcp/` (auto-created) | 700 |
 | gcalcli OAuth token | `~/.local/share/gcalcli/oauth` | 600 |
 | gogcli credentials | System keyring (GNOME Keyring) | Encrypted |
-| Syncthing config | `~/.config/syncthing/` | 700 |
-| Telegram bot code | Proxmox LXC container | Deployed via git clone |
-| Field capture staging | `~/incoming-photos/` (Syncthing target) | Normal |
+| Syncthing config | `~/.config/syncthing/` (desktop + dev server) | 700 |
+| Telegram bot code | Dev server (10.0.10.21) | Deployed via git clone |
+| LocalSend config | Dev server systemd service | 700 |
+| Field capture staging | `~/incoming-photos/` on dev server (LocalSend target) | Normal |

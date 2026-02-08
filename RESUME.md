@@ -2,30 +2,28 @@
 
 ## Right Now
 **Phase:** Phase 1 - Foundation Setup
-**Last:** Strategy updated -- replaced Tailscale with Cloudflare Tunnel, bot hosting moved to Proxmox LXC, removed redundant Fetch MCP (2026-02-08)
-**Next:** Verify Cloudflare Tunnel SSH route, install Syncthing (desktop + phone), install phone apps
+**Last:** Syncthing + LocalSend installed on dev server (10.0.10.21), SSH key auth configured (2026-02-08)
+**Next:** Install Syncthing on desktop (sync with dev server), verify Cloudflare Tunnel SSH from phone
 **Blocked:** Nothing
 
 ## Quick Context
 - Internal tooling project for Precept Systems
 - Connects Claude Code to Google Workspace, GitHub, Telegram via MCP servers
-- Mobile workflow via Telegram bot + Syncthing + Tailscale
-- 3 MCP servers configured in ~/.claude.json (google-workspace, github, telegram); fetch removed (redundant)
-- All credentials exported in ~/.bashrc
-- Google OAuth first-run will prompt browser auth on first use
-- Telegram MCP may need interactive phone verification on first connect
+- Dev server (10.0.10.21, VM 105 on Proxmox "pve") is the always-on hub
+- iPhone (iOS) is the mobile device -- Telegram bot + LocalSend for bulk transfers
+- 3 MCP servers configured in ~/.claude.json (google-workspace, github, telegram)
+- Claude Code runs on desktop (10.0.10.101), syncs with dev server via git
+- All credentials exported in ~/.bashrc on desktop
+- SSH key auth configured: desktop → dev server
 
 ## Recent Progress
-- gh CLI authenticated (jasonvanwyk, SSH, key uploaded)
-- GITHUB_TOKEN exported dynamically via `gh auth token`
-- Google Cloud project created (Precept-AI-Tools, ID: precept-ai-tools)
-- 6 Google APIs enabled (Gmail, Calendar, Drive, Docs, Sheets, Slides)
-- OAuth consent screen configured, scopes added, published to production
-- OAuth client created (Desktop app, "Claude Code Integration")
-- Credentials JSON saved to ~/.config/precept/google-credentials.json
-- GOOGLE_OAUTH_CLIENT_ID + SECRET exported in .bashrc
-- Telegram API app created (Precept Tools), api_id + api_hash in .bashrc
-- Telegram MCP server added to ~/.claude.json
+- All 3 MCP servers tested and working (Google Workspace, GitHub, Telegram)
+- Fetch MCP removed (redundant with built-in WebFetch)
+- Strategy revised: Cloudflare Tunnel replaces Tailscale, dev server replaces desktop for services
+- SSH key auth set up: desktop → dev server (10.0.10.21)
+- Syncthing installed and running on dev server (systemd user service)
+- LocalSend installed headless on dev server (systemd user service, port 53317)
+- ~/incoming-photos/ created on dev server for file staging
 
 ## Key Files
 - `STATUS.md` - Full project tracking
@@ -38,7 +36,10 @@
 - [x] GitHub PAT creation
 - [x] Telegram API credentials
 - [x] Add Telegram MCP to ~/.claude.json
-- [x] Test all MCP servers (all 4 working)
+- [x] Test all MCP servers (all 3 working + built-in WebFetch)
+- [x] SSH key auth to dev server (10.0.10.21)
+- [x] Syncthing on dev server (systemd service)
+- [x] LocalSend on dev server (headless, systemd service)
+- [ ] Install Syncthing on desktop (sync with dev server)
+- [ ] Verify Cloudflare Tunnel SSH from phone
 - [ ] Create Telegram bot via @BotFather (Phase 2)
-- [ ] Verify Cloudflare Tunnel SSH route
-- [ ] Install Syncthing, phone apps

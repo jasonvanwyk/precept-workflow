@@ -23,9 +23,10 @@ This is the practical guide for setting up and using the Precept Workflow system
 Precept Workflow connects your tools so you can manage ICT projects without leaving the terminal or your phone:
 
 - **Claude Code + MCP Servers** -- Read/send email, check calendar, manage GitHub repos, and message via Telegram -- all from within a Claude Code session
-- **Telegram Bot** (Phase 2) -- Send photos, voice notes, and status queries from your phone to the correct project folder; runs on Proxmox LXC container
-- **Syncthing** -- Sync files between phone and desktop over WiFi (no cloud)
-- **Cloudflare Tunnel** -- SSH into your desktop/Proxmox from any client site via your phone (already configured)
+- **Telegram Bot** (Phase 2) -- Primary mobile interface: send photos, voice notes, and status queries from your iPhone to the correct project folder; runs on the dev server (10.0.10.21)
+- **LocalSend** -- Bulk file/photo transfers from iPhone to dev server over WiFi (no cloud)
+- **Syncthing** -- Sync files between desktop and dev server (not phone)
+- **Cloudflare Tunnel** -- SSH into the dev server from any client site via your phone (already configured)
 
 ### What are MCP Servers?
 
@@ -54,27 +55,33 @@ DESKTOP (Arch Linux)
 |    MCP: google-workspace, github,         |
 |         telegram                          |
 |                                           |
-|  Syncthing (background)                   |
-|    Peer-to-peer sync with phone           |
+|  ~/Projects/ (pulled from GitHub,         |
+|    pushed back when done)                 |
 |                                           |
-|  ~/Projects/                              |
-|    All project files live here            |
+|  Syncthing (sync with dev server)         |
 +------------------------------------------+
          |              |
-    Google APIs    NFS/Syncthing
+    Google APIs    Syncthing/GitHub
          |              |
 +------------------------------------------+
-|  PROXMOX SERVERS (2x)                     |
-|    Telegram Bot (LXC container, Phase 2)  |
-|    Cloudflare Tunnel (external access)    |
+|  DEV SERVER (10.0.10.21)                  |
+|  VM 105 "ubuntu-gen" on Proxmox "pve"     |
+|  ** CENTRAL HUB **                        |
+|                                           |
+|  Telegram Bot (Phase 2, primary mobile)   |
+|  LocalSend (headless, systemd, :53317)    |
+|  ~/Projects/ (cloned from GitHub)         |
+|  Cloudflare Tunnel (external access)      |
 +------------------------------------------+
          |              |
     Telegram API   Cloudflare Tunnel
          |              |
 +------------------------------------------+
-|  PHONE (Android)                          |
-|    Telegram, Syncthing, Termius,          |
-|    Markor, WiFiAnalyzer                   |
+|  iPHONE                                   |
+|    Telegram (primary: photo filing,       |
+|      voice transcription, status queries) |
+|    LocalSend (bulk file transfers)        |
+|    Termius (SSH via CF Tunnel)            |
 +------------------------------------------+
 ```
 
@@ -230,7 +237,9 @@ Already configured and working (used for the Fairfield water monitoring app).
   ssh jason@<cloudflare-tunnel-hostname>
   ```
 
-### 3.5 Syncthing (File Sync)
+### 3.5 Syncthing (Desktop <-> Dev Server Sync)
+
+Syncthing is used between the desktop and the dev server (10.0.10.21) for non-git file sync. It is NOT used on the phone -- LocalSend handles phone-to-dev-server transfers.
 
 - [ ] **Install on Desktop** (~5 min)
   ```bash
@@ -240,25 +249,33 @@ Already configured and working (used for the Fairfield water monitoring app).
   ```
   Access web UI at http://127.0.0.1:8384
 
-- [ ] **Install on Phone** (~5 min)
-  1. Install Syncthing from F-Droid
-  2. Open it, note the device ID
+- [ ] **Pair with Dev Server** (~5 min)
+  1. In desktop Syncthing web UI: Add Remote Device > paste dev server device ID
+  2. On dev server: accept the pairing request
+  3. Create shared folders as needed for non-git file sync
 
-- [ ] **Pair Devices** (~5 min)
-  1. In desktop Syncthing web UI: Add Remote Device > paste phone device ID
-  2. On phone: accept the pairing request
-  3. Create a shared folder: `field-capture`
-     - Desktop path: `~/incoming-photos/`
-     - Phone path: choose a convenient location
-  4. Set sync to WiFi-only on phone (saves mobile data)
+### 3.6 LocalSend (iPhone -> Dev Server Bulk Transfers)
 
-### 3.6 Phone Apps
+LocalSend is already set up on the dev server (headless, systemd service on 10.0.10.21:53317) and on the iPhone and desktop.
 
-- [ ] Install **Termius** (Play Store) -- SSH client
-- [ ] Install **Markor** (F-Droid) -- Markdown editor, point at Syncthing folder
-- [ ] Install **WiFiAnalyzer** (F-Droid) -- WiFi survey tool
+- [ ] **Verify dev server LocalSend is running** (~2 min)
+  ```bash
+  ssh jason@10.0.10.21
+  systemctl status localsend
+  ```
+- [ ] **Test transfer from iPhone** (~2 min)
+  1. Open LocalSend on iPhone
+  2. Select photos/files to send
+  3. Dev server should appear as a target on the same WiFi network
+  4. Verify files arrive in `~/incoming-photos/` on dev server
 
-### 3.7 Desktop CLI Tools (Optional)
+### 3.7 iPhone Apps
+
+- [ ] Install **Telegram** (App Store) -- Primary mobile interface (bot for photo filing, voice transcription, status queries)
+- [ ] Install **LocalSend** (App Store) -- Bulk file/photo transfers to dev server
+- [ ] Install **Termius** (App Store) -- SSH client (via Cloudflare Tunnel)
+
+### 3.8 Desktop CLI Tools (Optional)
 
 These are nice-to-have CLI tools that share the same Google OAuth credentials:
 
@@ -272,12 +289,13 @@ These are nice-to-have CLI tools that share the same Google OAuth credentials:
 
 After Phase 1 is working:
 
-- [ ] Clone `claude-telegram-bridge` repo
+- [ ] Clone `claude-telegram-bridge` repo onto dev server (10.0.10.21)
 - [ ] Configure with bot token + Claude API key + whitelisted user ID
 - [ ] Add custom handlers: photo filing with project routing, voice transcription
-- [ ] Deploy bot to Proxmox LXC container with auto-restart
-- [ ] Create desktop script: process `~/incoming-photos/` (rename, move to project, commit)
-- [ ] Test full workflow: send photo from phone, verify it lands in correct project folder
+- [ ] Deploy bot on dev server with systemd auto-restart
+- [ ] Create dev server script: process `~/incoming-photos/` from LocalSend (rename, move to project, commit)
+- [ ] Test Telegram workflow: send photo from iPhone via bot, verify it lands in correct project folder
+- [ ] Test LocalSend workflow: send batch of photos from iPhone, verify they arrive in `~/incoming-photos/` on dev server
 - [ ] Add new slash commands to templates (import-email, site-visit-prep, file-photo)
 - [ ] Update project.yml schema with integration section
 
@@ -389,12 +407,20 @@ Always run `/project:wrap-up` before closing Claude Code. This:
 1. Are `TELEGRAM_API_ID` and `TELEGRAM_API_HASH` set?
 2. First run may require interactive phone verification -- run `uvx telegram-mcp` manually once to complete setup.
 
-### Syncthing Not Syncing
+### Syncthing Not Syncing (Desktop <-> Dev Server)
 
 **Check:**
-1. Are both devices on the same WiFi?
-2. Is Syncthing running? `systemctl --user status syncthing`
-3. Check the web UI at http://127.0.0.1:8384
+1. Are both machines on the same network?
+2. Is Syncthing running on desktop? `systemctl --user status syncthing`
+3. Is Syncthing running on dev server? `ssh jason@10.0.10.21 systemctl --user status syncthing`
+4. Check the web UI at http://127.0.0.1:8384
+
+### LocalSend Not Receiving (Dev Server)
+
+**Check:**
+1. Is the LocalSend service running? `ssh jason@10.0.10.21 systemctl status localsend`
+2. Is port 53317 accessible? Check firewall rules on dev server
+3. Are iPhone and dev server on the same WiFi network?
 
 ---
 
@@ -432,12 +458,14 @@ export GITHUB_TOKEN="..."
 | This project | `~/Projects/precept-workflow/` |
 | Template system | `~/Projects/precept-assets/` |
 | All client/internal projects | `~/Projects/*/` |
-| Field capture staging | `~/incoming-photos/` (Syncthing target) |
+| Field capture staging | `~/incoming-photos/` on dev server (LocalSend target) |
 
 ### Services
 
-| Service | How to Start | How to Check |
-|---------|-------------|-------------|
-| Syncthing | `systemctl --user start syncthing` | `systemctl --user status syncthing` |
-| Cloudflare Tunnel | Already running on Proxmox VM | Check Cloudflare Zero Trust dashboard |
-| Telegram Bot (Phase 2) | Proxmox LXC container | Check via Proxmox web UI |
+| Service | Where | How to Start | How to Check |
+|---------|-------|-------------|-------------|
+| Syncthing (desktop) | Desktop | `systemctl --user start syncthing` | `systemctl --user status syncthing` |
+| Syncthing (dev server) | 10.0.10.21 | `systemctl --user start syncthing` | `systemctl --user status syncthing` |
+| LocalSend | Dev server (10.0.10.21) | `systemctl start localsend` | `systemctl status localsend` |
+| Cloudflare Tunnel | Dev server (10.0.10.21) | Already running | Check Cloudflare Zero Trust dashboard |
+| Telegram Bot (Phase 2) | Dev server (10.0.10.21) | systemd service | `systemctl status precept-bot` |
