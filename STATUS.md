@@ -5,7 +5,7 @@
 
 ---
 
-## Current Phase: Phase 1 - Foundation Setup
+## Current Phase: Phase 2 - Semi-Automated Workflows (Phase 1 Complete)
 
 Setting up MCP servers, credentials, and mobile tools so that all Precept projects can use Google Workspace, GitHub, and Telegram integrations from within Claude Code.
 
@@ -38,6 +38,10 @@ Setting up MCP servers, credentials, and mobile tools so that all Precept projec
 | Install LocalSend on dev server | 2026-02-08 | Headless mode via xvfb-run, systemd user service on port 53317 |
 | Drop Syncthing from plan | 2026-02-08 | Git + LocalSend + scp covers all sync needs; Syncthing adds unnecessary complexity |
 | Update docs for iOS + dev server hub | 2026-02-08 | iOS not Android, LocalSend for bulk transfers, dev server as central hub |
+| Fix VLAN for TP-Link WiFi AP | 2026-02-08 | Switch port 10 moved from VLAN 1 → VLAN 10; iPhone WiFi now on Work VLAN |
+| Test LocalSend from iPhone to dev server | 2026-02-08 | 2 HEIC photos received in ~/incoming-photos/, auto-accept enabled |
+| Cloudflare Tunnel SSH to dev server | 2026-02-08 | cloudflared installed, tunnel "dev-server", browser SSH at ssh.meter-tracker.com, Zero Trust Access with email OTP |
+| Desktop SSH via Cloudflare Tunnel | 2026-02-08 | ProxyCommand in ~/.ssh/config, ssh jason@ssh.meter-tracker.com works |
 
 ### In Progress
 
@@ -48,9 +52,7 @@ Setting up MCP servers, credentials, and mobile tools so that all Precept projec
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Verify Cloudflare Tunnel SSH route | TODO | Phase 1: confirm SSH access from phone via existing tunnel |
-| Test LocalSend from iPhone to dev server | TODO | Phase 1: verify files arrive in ~/incoming-photos/ on dev server |
-| Build Telegram bot (Phase 2) | TODO | Clone claude-telegram-bridge, deploy on dev server |
+| Build Telegram bot (Phase 2) | TODO | Create bot via @BotFather, clone claude-telegram-bridge, deploy on dev server |
 | Template integration (Phase 2) | TODO | Add slash commands, project.yml schema |
 
 ---
@@ -62,6 +64,6 @@ Setting up MCP servers, credentials, and mobile tools so that all Precept projec
 3. claude-telegram-bridge as bot starting point
 4. Dev server (10.0.10.21) as central hub -- bot, LocalSend, project files
 5. No Syncthing -- git for project sync, LocalSend for iPhone → dev server, scp for ad-hoc
-6. Cloudflare Tunnel for remote access (already configured, no subscription)
+6. Cloudflare Tunnel for remote SSH (tunnel "dev-server", browser SSH at ssh.meter-tracker.com, Zero Trust email OTP)
 7. Environment variables for secrets (not .env files)
 8. iOS (not Android) -- Telegram, LocalSend, Termius on iPhone

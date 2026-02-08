@@ -1,9 +1,9 @@
 # Project Resume
 
 ## Right Now
-**Phase:** Phase 1 - Foundation Setup
-**Last:** LocalSend installed on dev server, all docs updated for iOS + dev server hub, Syncthing dropped (2026-02-08)
-**Next:** Verify Cloudflare Tunnel SSH from phone, test LocalSend from iPhone to dev server
+**Phase:** Phase 1 COMPLETE -- ready for Phase 2
+**Last:** Phase 1 finished: Cloudflare Tunnel SSH working (browser-based via ssh.meter-tracker.com), LocalSend tested from iPhone to dev server, VLAN fix for TP-Link AP (2026-02-08)
+**Next:** Phase 2 -- Create Telegram bot via @BotFather, build and deploy on dev server
 **Blocked:** Nothing
 
 ## Quick Context
@@ -22,8 +22,11 @@
 - Strategy revised: Cloudflare Tunnel replaces Tailscale, dev server replaces desktop for services
 - SSH key auth set up: desktop → dev server (10.0.10.21)
 - LocalSend installed headless on dev server (systemd user service, port 53317)
+- LocalSend tested: iPhone → dev server ~/incoming-photos/ working
 - Syncthing dropped -- git handles project sync, LocalSend handles phone transfers, scp for ad-hoc
-- ~/incoming-photos/ created on dev server for file staging
+- VLAN fix: switch port 10 moved from VLAN 1 → VLAN 10 so TP-Link WiFi clients can see dev server
+- Cloudflare Tunnel SSH: cloudflared on dev server, browser-based SSH via https://ssh.meter-tracker.com
+- Desktop SSH via ProxyCommand in ~/.ssh/config (cloudflared access ssh)
 
 ## Key Files
 - `STATUS.md` - Full project tracking
@@ -40,5 +43,8 @@
 - [x] SSH key auth to dev server (10.0.10.21)
 - [x] LocalSend on dev server (headless, systemd service)
 - [x] Syncthing dropped (git + LocalSend + scp covers all sync needs)
-- [ ] Verify Cloudflare Tunnel SSH from phone
+- [x] LocalSend tested from iPhone to dev server (HEIC photos received)
+- [x] Cloudflare Tunnel SSH from phone (browser-based terminal via ssh.meter-tracker.com)
+- [x] Cloudflare Tunnel SSH from desktop (ProxyCommand cloudflared access ssh)
+- [x] VLAN fix: TP-Link AP switch port moved to VLAN 10
 - [ ] Create Telegram bot via @BotFather (Phase 2)
