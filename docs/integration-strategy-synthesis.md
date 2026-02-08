@@ -9,9 +9,11 @@
 
 ## 1. MCP Server Stack
 
-**Decision: 4 servers now, 2 more later.**
+**Decision: 3 servers now, 2 more later.**
 
 All MCP servers use stdio transport -- they are spawned as child processes by Claude Code on demand. No always-on daemons required.
+
+> **Note:** Fetch MCP server was removed -- Claude Code has a built-in `WebFetch` tool that provides the same functionality without consuming MCP context tokens.
 
 ### Must-Have (Install This Week)
 
@@ -19,8 +21,7 @@ All MCP servers use stdio transport -- they are spawned as child processes by Cl
 |---|--------|------|------------------|----------|
 | 1 | **Google Workspace** | `taylorwilsdon/google_workspace_mcp` | Gmail, Calendar, Drive, Docs, Sheets, Slides -- full read/write | MUST-HAVE |
 | 2 | **GitHub** | `github/github-mcp-server` | Issues, PRs, repos, code search, Projects management | MUST-HAVE |
-| 3 | **Fetch** | `@modelcontextprotocol/server-fetch` | Web content retrieval, URL to markdown conversion | MUST-HAVE |
-| 4 | **Telegram** | `chigwell/telegram-mcp` | Read/send Telegram messages, manage chats, download media | MUST-HAVE |
+| 3 | **Telegram** | `chigwell/telegram-mcp` | Read/send Telegram messages, manage chats, download media | MUST-HAVE |
 
 ### Nice-to-Have (Install Next Month)
 
@@ -35,6 +36,7 @@ All MCP servers use stdio transport -- they are spawned as child processes by Cl
 |--------|----------|
 | Official Filesystem MCP | Redundant -- Claude Code has built-in file operations |
 | Desktop Commander | Redundant -- Claude Code has built-in terminal access |
+| Fetch (`server-fetch`) | Redundant -- Claude Code has built-in `WebFetch` tool |
 | Signal MCP (rymurr) | Too immature (18 stars), rough edges |
 | Google Official MCP (google/mcp) | Not yet mature for CLI use -- watch for GA |
 
@@ -59,11 +61,6 @@ All MCP servers use stdio transport -- they are spawned as child processes by Cl
       "env": {
         "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
       }
-    },
-    "fetch": {
-      "type": "stdio",
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-fetch"]
     },
     "telegram": {
       "type": "stdio",
@@ -267,33 +264,17 @@ Phone (Telegram)                Desktop (Bot Service)
 
 ### Hosting Decision
 
-**Decision: Jason's Linux desktop via systemd service.**
+**Decision: Proxmox LXC container, accessible via Cloudflare Tunnel.**
 
 | Option | Verdict | Reason |
 |--------|---------|--------|
-| **Desktop + systemd** | **USE THIS** | Direct filesystem access to ~/Projects/, zero cost, polling mode needs no public IP |
-| Proxmox LXC | Phase 2 | Good for always-on, but adds complexity; use if desktop reliability is an issue |
-| VPS | Not needed | Adds cost and requires file syncing; only if home internet is unreliable |
+| **Proxmox LXC** | **USE THIS** | Always-on (survives desktop reboots), isolated environment, Jason already runs 2x Proxmox servers |
+| Desktop + systemd | Fallback | Direct filesystem access, but tied to desktop uptime |
+| VPS | Not needed | Adds cost; Jason already has equivalent infrastructure with Proxmox + Cloudflare Tunnel |
 
-**Polling mode** eliminates the need for a public IP, HTTPS endpoint, or tunnel. The bot simply calls out to Telegram servers. Combined with a systemd service for auto-restart, this is reliable whenever the desktop is on and connected.
+**Polling mode** eliminates the need for a public IP or webhook endpoint. The bot simply calls out to Telegram servers. Running in a Proxmox LXC container means the bot stays up even when the desktop is off or being rebooted.
 
-**systemd service file** (`~/.config/systemd/user/precept-telegram-bot.service`):
-```ini
-[Unit]
-Description=Precept Telegram Bot
-After=network-online.target
-
-[Service]
-Type=simple
-WorkingDirectory=/home/jason/Projects/precept-telegram-bot
-ExecStart=/usr/bin/node index.js
-Restart=always
-RestartSec=10
-EnvironmentFile=/home/jason/.config/precept/bot.env
-
-[Install]
-WantedBy=default.target
-```
+The bot accesses ~/Projects/ via an NFS/SMB mount or Syncthing share from the desktop, or the projects are cloned directly into the container.
 
 ### Estimated Costs
 
@@ -354,13 +335,12 @@ Optional: Desktop script parses CSV into a markdown summary table for the projec
 
 ### On-Site Project File Access
 
-**Decision: Tailscale + Termius (SSH)**
+**Decision: Cloudflare Tunnel + Termius (SSH)**
 
 ```
-Phone (Termius)  ---> Tailscale mesh VPN ---> Desktop SSH
-                      (free personal plan)
-                      NAT traversal,
-                      no port forwarding
+Phone (Termius)  ---> Cloudflare Tunnel ---> Proxmox VM/Desktop SSH
+                      (already configured,
+                       no subscription needed)
 ```
 
 From any client site, Jason can:
@@ -369,7 +349,7 @@ From any client site, Jason can:
 - `git log --oneline -5` -- see recent work
 - Access Syncthing web UI remotely
 
-**Install**: Tailscale on both phone and desktop. Termius on Android as SSH client.
+**Already in place**: Cloudflare Tunnel is configured and working (used for the Fairfield water monitoring app). Termius on Android as SSH client.
 
 ### Offline-First Considerations
 
@@ -377,7 +357,7 @@ From any client site, Jason can:
 |-----------|----------|
 | No WiFi at client site | All capture is local-first. Syncthing queues until WiFi available. |
 | Expensive mobile data (R100-150/GB) | Syncthing: WiFi-only mode. FolderSync: restrict to home SSID. |
-| Load shedding kills desktop | UPS for desktop. Or: Raspberry Pi as always-on sync target (low power). |
+| Load shedding kills desktop | Proxmox servers on UPS. Bot runs in LXC container, independent of desktop. |
 | HEIC photos from some devices | Desktop ingestion script runs `heif-convert` as part of pipeline. |
 | WhatsApp photos with terrible names | Route through Telegram bot instead, which enforces caption-based naming. |
 
@@ -388,8 +368,7 @@ From any client site, Jason can:
 | **Telegram** | Play Store | Messaging bot interface | Free |
 | **Syncthing** | F-Droid | Peer-to-peer file sync | Free |
 | **Markor** | F-Droid | Markdown editor for on-site notes | Free |
-| **Termius** | Play Store | SSH client (via Tailscale) | Free tier |
-| **Tailscale** | Play Store | Mesh VPN for remote access | Free personal |
+| **Termius** | Play Store | SSH client (via Cloudflare Tunnel) | Free tier |
 | **WiFiAnalyzer** | F-Droid | WiFi survey tool | Free |
 
 ---
@@ -409,50 +388,70 @@ From any client site, Jason can:
 |  |  MCP Servers:    |    |     CLAUDE.md, STATUS.md,        |   |
 |  |  - Google WS     |--->|     correspondence/, pics/,      |   |
 |  |  - GitHub        |    |     docs/                         |   |
-|  |  - Fetch         |    |   jenkins-network/               |   |
-|  |  - Telegram      |    |   jenny_henschel/                |   |
-|  +--------+---------+    |   ...                            |   |
-|           |              +------------------+---------------+   |
-|           |                                 |                   |
-|  +--------+---------+              +--------+--------+          |
-|  | Gemini CLI       |              | Telegram Bot    |          |
-|  | (alternative AI) |              | (systemd svc)   |          |
-|  +------------------+              | - Photo filing  |          |
-|                                    | - Voice transcr |          |
-|  +------------------+              | - Status queries|          |
-|  | Syncthing        |              +--------+--------+          |
+|  |  - Telegram      |    |   jenkins-network/               |   |
+|  +--------+---------+    |   jenny_henschel/                |   |
+|           |              |   ...                            |   |
+|  +--------+---------+    +------------------+---------------+   |
+|  | Gemini CLI       |                       |                   |
+|  | (alternative AI) |                       | NFS/Syncthing     |
+|  +------------------+                       |                   |
+|                                             |                   |
+|  +------------------+                       |                   |
+|  | Syncthing        |                       |                   |
 |  | (peer-to-peer)   |                       |                   |
 |  +--------+---------+                       |                   |
 |           |                                 |                   |
 +===========|=================================|===================+
             |                                 |
-     WiFi sync                         Telegram API
-     (photos,                          (polling mode)
+     WiFi sync                                |
+     (photos,                                 |
       files)                                  |
             |                                 |
-+-----------+----------+         +------------+----------+
-| JASON'S ANDROID      |         | CLOUD SERVICES        |
-| PHONE                |         |                       |
-|                      |         | Telegram Servers      |
-| Telegram App --------+-------->| (free, message relay) |
-| Syncthing    --------+         |                       |
-| Markor (markdown)    |         | Google Workspace APIs |
-| Termius (SSH)        |         | (Gmail, Calendar,     |
-| Tailscale (VPN)      |         |  Drive, Docs, Sheets, |
-| WiFiAnalyzer         |         |  Slides)              |
-+-----------------------+         |                       |
-                                 | GitHub API            |
-                                 | (repos, issues, PRs)  |
-                                 |                       |
-                                 | Anthropic Claude API  |
-                                 | (AI responses)        |
-                                 |                       |
-                                 | OpenAI Whisper API    |
-                                 | (voice transcription) |
-                                 |                       |
-                                 | Odoo ERP              |
-                                 | (quotes, invoices)    |
-                                 +-----------------------+
+            |              +==================|===================+
+            |              | PROXMOX SERVERS (2x)                 |
+            |              |                                      |
+            |              |  +--------+--------+                 |
+            |              |  | LXC Container   |                 |
+            |              |  | Telegram Bot    |                 |
+            |              |  | - Photo filing  |                 |
+            |              |  | - Voice transcr |                 |
+            |              |  | - Status queries|                 |
+            |              |  +--------+--------+                 |
+            |              |           |                          |
+            |              |  Cloudflare Tunnel (already config)  |
+            |              |  - External access to services       |
+            |              |  - Hosts Fairfield water monitor app |
+            |              +===========|==========================+
+            |                          |
+            |                   Telegram API
+            |                   (polling mode)
+            |                          |
++-----------+----------+  +------------+----------+
+| JASON'S ANDROID      |  | CLOUD SERVICES        |
+| PHONE                |  |                       |
+|                      |  | Telegram Servers      |
+| Telegram App --------+->| (free, message relay) |
+| Syncthing    --------+  |                       |
+| Markor (markdown)    |  | Google Workspace APIs |
+| Termius (SSH via CF) |  | (Gmail, Calendar,     |
+| WiFiAnalyzer         |  |  Drive, Docs, Sheets, |
++-----------------------+  |  Slides)              |
+                          |                       |
+                          | GitHub API            |
+                          | (repos, issues, PRs)  |
+                          |                       |
+                          | Anthropic Claude API  |
+                          | (AI responses)        |
+                          |                       |
+                          | OpenAI Whisper API    |
+                          | (voice transcription) |
+                          |                       |
+                          | Cloudflare            |
+                          | (tunnel, DNS)         |
+                          |                       |
+                          | Odoo ERP              |
+                          | (quotes, invoices)    |
+                          +-----------------------+
 ```
 
 ### Data Flow: Common Scenarios
@@ -486,7 +485,7 @@ ON-SITE (phone):
    -> Bot transcribes via Whisper, saves to correspondence/
 6. Quick status check via Telegram: /status
    -> Bot returns STATUS.md content
-7. Need credentials: SSH via Termius+Tailscale, cat credentials file
+7. Need credentials: SSH via Termius+Cloudflare Tunnel, cat credentials file
 
 AFTER (at desk):
 8. "Update fairfield-water STATUS.md: site visit completed, three APs found, channel conflict on 6"
@@ -511,9 +510,9 @@ AFTER (at desk):
 |-----------|---------|------------|---------------------|
 | Claude Code + MCP servers | Desktop | No -- on-demand | Internet (for API calls) |
 | Gemini CLI | Desktop | No -- on-demand | Internet |
-| Telegram Bot | Desktop (systemd) | Yes (when desktop is on) | Internet (polling) |
+| Telegram Bot | Proxmox LXC | Yes (always-on) | Internet (polling) |
 | Syncthing | Desktop + Phone | Yes (background) | WiFi (peer-to-peer) |
-| Tailscale | Desktop + Phone | Yes (background) | Internet (mesh VPN) |
+| Cloudflare Tunnel | Proxmox VM | Yes (always-on) | Internet |
 | Git/GitHub | Desktop | No -- on-demand | Internet (for push/pull) |
 | Markor | Phone | No -- on-demand | None (local files) |
 | Google Workspace APIs | Google Cloud | Always | Internet |
@@ -533,8 +532,8 @@ AFTER (at desk):
 | 1 | Install `uvx` (`pip install uv`) and add google-workspace MCP to `~/.claude.json` | 15 min | Free |
 | 1 | First-run OAuth authentication (browser popup) | 5 min | Free |
 | 1 | Test: read inbox, check calendar, list Drive files from Claude Code | 15 min | Free |
-| 2 | Install Tailscale on desktop and phone | 15 min | Free |
-| 2 | Install Termius on phone, test SSH to desktop via Tailscale | 10 min | Free |
+| 2 | Configure Cloudflare Tunnel for SSH access (if not already routing to desktop/Proxmox) | 15 min | Free |
+| 2 | Install Termius on phone, test SSH via Cloudflare Tunnel | 10 min | Free |
 | 2 | Install Syncthing on desktop and phone, create `field-capture/` share folder (WiFi-only) | 20 min | Free |
 | 2 | Create Telegram bot via @BotFather, note token | 5 min | Free |
 | 2 | Get Telegram API credentials from my.telegram.org, add Telegram MCP to `~/.claude.json` | 10 min | Free |
@@ -551,7 +550,7 @@ AFTER (at desk):
 |------|------|------|
 | Clone `claude-telegram-bridge`, configure with bot token + Claude API key + whitelisted user ID | 1 hour | Free |
 | Add custom handlers: photo filing with project routing, voice transcription | 3 hours | Free |
-| Set up as systemd user service with auto-restart | 30 min | Free |
+| Deploy bot to Proxmox LXC container with auto-restart | 30 min | Free |
 | Create desktop script: process `field-capture/` folder (prompt for project, rename, move, commit) | 2 hours | Free |
 | Test full workflow: send photo from phone, verify it lands in correct project folder | 30 min | Free |
 | Add `/project:import-email` slash command to templates (see Section 8) | 30 min | Free |
@@ -569,7 +568,7 @@ AFTER (at desk):
 | Add WhatsApp MCP server (personal use only, ToS risk acknowledged) | 1 hour | Free |
 | Set up self-hosted Whisper (`whisper.cpp`) on desktop if GPU available | 1 hour | Free |
 | Build full photo ingestion pipeline with inotifywait (auto-rename, HEIC convert, commit) | 3 hours | Free |
-| Evaluate OpenClaw/Moltbot for Proxmox LXC deployment as always-on bot platform | 4 hours | Free |
+| Evaluate OpenClaw/Moltbot as enhanced bot platform (already on Proxmox) | 4 hours | Free |
 | Create `precept-init` integration: new projects auto-configure MCP and bot routing | 2 hours | Free |
 
 **Phase 3 Total Cost: Same API costs + optional VPS if needed (~R70-180/month)**
@@ -776,11 +775,11 @@ project-root/
 | taylorwilsdon/google_workspace_mcp as Google MCP | ngs/google-mcp-server, Google official, MarkusPfundstein/mcp-gsuite, Composio | Most comprehensive (10 services), 1,300 stars, active development, Python/uvx fits the ecosystem |
 | Telegram over Signal for bot | Signal via signal-cli | Telegram: official Bot API, 2-minute setup, rich media handling, massive ecosystem. Signal: no official bot API, immature tooling. |
 | claude-telegram-bridge as starting point | claude-code-telegram, OpenClaw, custom build | Built-in vision + Whisper transcription + streaming. claude-code-telegram is a good fallback. OpenClaw is overkill for v1. |
-| Desktop hosting (systemd) over Proxmox LXC | Proxmox LXC, VPS, Raspberry Pi | Direct filesystem access, zero cost, polling mode needs no public IP. LXC is Phase 2 if reliability issues arise. |
+| Proxmox LXC for bot hosting | Desktop systemd, VPS, Raspberry Pi | Always-on (survives desktop reboots), Jason already runs 2x Proxmox servers, no additional cost. |
 | Syncthing for file sync | FolderSync, Google Drive, Dropbox, manual USB | Peer-to-peer (no cloud), free, WiFi-only mode, works offline. FolderSync Pro added in Phase 2 for per-project routing. |
-| Tailscale for remote access | WireGuard (manual), SSH port forwarding, ngrok | Zero-config mesh VPN, free personal plan, NAT traversal built in, no port forwarding needed. |
+| Cloudflare Tunnel for remote access | Tailscale, WireGuard (manual), SSH port forwarding, ngrok | Already configured and working (hosts Fairfield water monitoring app), no subscription needed, no additional setup. |
 | Whisper API over self-hosted | Self-hosted whisper.cpp, on-device NotelyVoice, Google Speech-to-Text | API is simplest to start (R1-2 per site visit). Self-hosted added in Phase 3 if cost or privacy becomes a concern. |
-| 4 MCP servers initially | More servers, fewer servers | Sweet spot: Google Workspace + GitHub + Fetch + Telegram cover 90% of use cases. Filesystem and Desktop Commander are redundant with Claude Code built-ins. |
+| 3 MCP servers initially | More servers, fewer servers | Sweet spot: Google Workspace + GitHub + Telegram cover 90% of use cases. Fetch, Filesystem, and Desktop Commander are redundant with Claude Code built-ins. |
 | No n8n in Phase 1 | n8n from day one | n8n adds Docker infrastructure overhead. MCP server handles interactive Google Workspace use. n8n reserved for Phase 3 automated workflows. |
 | Environment variables for secrets | .env files, secrets manager, hardcoded | Simplest for solo operator. ~/.bashrc is chmod 600. GNOME Keyring used where tools support it. |
 
@@ -805,10 +804,8 @@ sudo pacman -S syncthing                # File sync daemon
 sudo pacman -S inotify-tools            # For gitwatch/file watchers
 pip install gitwatch                    # Auto-commit on file changes
 
-# VPN
-# Install Tailscale: https://tailscale.com/download/linux
-curl -fsSL https://tailscale.com/install.sh | sh
-sudo tailscale up
+# Remote access -- Cloudflare Tunnel already configured
+# No additional VPN software needed
 ```
 
 ### Phone (Android)
@@ -819,7 +816,6 @@ sudo tailscale up
 | Syncthing | F-Droid |
 | Markor | F-Droid |
 | Termius | Play Store |
-| Tailscale | Play Store |
 | WiFiAnalyzer | F-Droid |
 
 ### Environment Variables (~/.bashrc)
@@ -857,6 +853,5 @@ export OPENAI_API_KEY="sk-..."
 | gcalcli OAuth token | `~/.local/share/gcalcli/oauth` | 600 |
 | gogcli credentials | System keyring (GNOME Keyring) | Encrypted |
 | Syncthing config | `~/.config/syncthing/` | 700 |
-| Telegram bot service | `~/.config/systemd/user/precept-telegram-bot.service` | 644 |
-| Telegram bot code | `~/Projects/precept-telegram-bot/` | Normal project |
+| Telegram bot code | Proxmox LXC container | Deployed via git clone |
 | Field capture staging | `~/incoming-photos/` (Syncthing target) | Normal |

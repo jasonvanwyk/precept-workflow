@@ -2,15 +2,15 @@
 
 ## Right Now
 **Phase:** Phase 1 - Foundation Setup
-**Last:** All credentials configured -- Google OAuth, GitHub PAT, Telegram API (2026-02-08)
-**Next:** Restart Claude Code and test all MCP servers (Google, GitHub, Telegram)
-**Blocked:** Nothing -- ready to test
+**Last:** Strategy updated -- replaced Tailscale with Cloudflare Tunnel, bot hosting moved to Proxmox LXC, removed redundant Fetch MCP (2026-02-08)
+**Next:** Verify Cloudflare Tunnel SSH route, install Syncthing (desktop + phone), install phone apps
+**Blocked:** Nothing
 
 ## Quick Context
 - Internal tooling project for Precept Systems
 - Connects Claude Code to Google Workspace, GitHub, Telegram via MCP servers
 - Mobile workflow via Telegram bot + Syncthing + Tailscale
-- All 4 MCP servers configured in ~/.claude.json (google-workspace, github, fetch, telegram)
+- 3 MCP servers configured in ~/.claude.json (google-workspace, github, telegram); fetch removed (redundant)
 - All credentials exported in ~/.bashrc
 - Google OAuth first-run will prompt browser auth on first use
 - Telegram MCP may need interactive phone verification on first connect
@@ -38,6 +38,7 @@
 - [x] GitHub PAT creation
 - [x] Telegram API credentials
 - [x] Add Telegram MCP to ~/.claude.json
-- [ ] Test all MCP servers (restart Claude Code first)
+- [x] Test all MCP servers (all 4 working)
 - [ ] Create Telegram bot via @BotFather (Phase 2)
-- [ ] Install Tailscale, Syncthing, phone apps
+- [ ] Verify Cloudflare Tunnel SSH route
+- [ ] Install Syncthing, phone apps

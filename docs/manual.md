@@ -23,9 +23,9 @@ This is the practical guide for setting up and using the Precept Workflow system
 Precept Workflow connects your tools so you can manage ICT projects without leaving the terminal or your phone:
 
 - **Claude Code + MCP Servers** -- Read/send email, check calendar, manage GitHub repos, and message via Telegram -- all from within a Claude Code session
-- **Telegram Bot** (Phase 2) -- Send photos, voice notes, and status queries from your phone to the correct project folder on your desktop
+- **Telegram Bot** (Phase 2) -- Send photos, voice notes, and status queries from your phone to the correct project folder; runs on Proxmox LXC container
 - **Syncthing** -- Sync files between phone and desktop over WiFi (no cloud)
-- **Tailscale** -- SSH into your desktop from any client site via your phone
+- **Cloudflare Tunnel** -- SSH into your desktop/Proxmox from any client site via your phone (already configured)
 
 ### What are MCP Servers?
 
@@ -37,10 +37,11 @@ They are configured in `~/.claude.json` and run as child processes -- they start
 
 | Server | What It Does | Config Status |
 |--------|-------------|---------------|
-| **google-workspace** | Gmail, Calendar, Drive, Docs, Sheets, Slides | In config, needs credentials |
-| **github** | Issues, PRs, repos, code search | In config, needs GITHUB_TOKEN |
-| **fetch** | Fetch web pages as markdown | In config, works already |
-| **telegram** | Read/send Telegram messages | Not yet in config |
+| **google-workspace** | Gmail, Calendar, Drive, Docs, Sheets, Slides | Working |
+| **github** | Issues, PRs, repos, code search | Working |
+| **telegram** | Read/send Telegram messages | Working |
+
+> **Note:** Fetch MCP server was removed -- Claude Code has a built-in `WebFetch` tool that provides the same functionality.
 
 ---
 
@@ -51,27 +52,29 @@ DESKTOP (Arch Linux)
 +------------------------------------------+
 |  Claude Code                              |
 |    MCP: google-workspace, github,         |
-|         fetch, telegram                   |
-|                                           |
-|  Telegram Bot (systemd, Phase 2)          |
-|    Photo filing, voice transcription      |
+|         telegram                          |
 |                                           |
 |  Syncthing (background)                   |
 |    Peer-to-peer sync with phone           |
 |                                           |
-|  Tailscale (background)                   |
-|    Mesh VPN for remote access             |
-|                                           |
 |  ~/Projects/                              |
 |    All project files live here            |
 +------------------------------------------+
-         |              |              |
-    Google APIs    Telegram API    Tailscale mesh
-         |              |              |
+         |              |
+    Google APIs    NFS/Syncthing
+         |              |
++------------------------------------------+
+|  PROXMOX SERVERS (2x)                     |
+|    Telegram Bot (LXC container, Phase 2)  |
+|    Cloudflare Tunnel (external access)    |
++------------------------------------------+
+         |              |
+    Telegram API   Cloudflare Tunnel
+         |              |
 +------------------------------------------+
 |  PHONE (Android)                          |
 |    Telegram, Syncthing, Termius,          |
-|    Tailscale, Markor, WiFiAnalyzer        |
+|    Markor, WiFiAnalyzer                   |
 +------------------------------------------+
 ```
 
@@ -213,25 +216,18 @@ These are the manual steps Jason needs to complete. Estimated total: ~2-3 hours 
   In Claude Code:
   - "List my recent Telegram chats"
 
-### 3.4 Tailscale (Remote Access)
+### 3.4 Cloudflare Tunnel (Remote Access)
 
-- [ ] **Install on Desktop** (~5 min)
-  ```bash
-  # Jason runs these manually:
-  curl -fsSL https://tailscale.com/install.sh | sh
-  sudo tailscale up
-  ```
-  Follow the browser link to authenticate.
+Already configured and working (used for the Fairfield water monitoring app).
 
-- [ ] **Install on Phone** (~5 min)
-  1. Install Tailscale from Play Store
-  2. Log in with same account
-  3. Both devices should appear in the Tailscale admin console
+- [ ] **Verify SSH route exists** (~5 min)
+  Check that the Cloudflare Tunnel can route SSH traffic to the desktop or a Proxmox VM.
+  If not already configured, add an SSH route in the Cloudflare Zero Trust dashboard.
 
 - [ ] **Test It** (~2 min)
   From phone (Termius or any SSH client):
   ```
-  ssh jason@<tailscale-hostname>
+  ssh jason@<cloudflare-tunnel-hostname>
   ```
 
 ### 3.5 Syncthing (File Sync)
@@ -279,7 +275,7 @@ After Phase 1 is working:
 - [ ] Clone `claude-telegram-bridge` repo
 - [ ] Configure with bot token + Claude API key + whitelisted user ID
 - [ ] Add custom handlers: photo filing with project routing, voice transcription
-- [ ] Set up as systemd user service (`~/.config/systemd/user/precept-telegram-bot.service`)
+- [ ] Deploy bot to Proxmox LXC container with auto-restart
 - [ ] Create desktop script: process `~/incoming-photos/` (rename, move to project, commit)
 - [ ] Test full workflow: send photo from phone, verify it lands in correct project folder
 - [ ] Add new slash commands to templates (import-email, site-visit-prep, file-photo)
@@ -339,7 +335,7 @@ Once set up, you just talk naturally in Claude Code. The MCP servers handle the 
 - Take photos via Telegram bot: send with caption like "fairfield panel-room"
 - Record voice note via Telegram: bot transcribes and saves to correspondence/
 - Quick status check: `/status` in Telegram bot
-- Need credentials: SSH via Termius + Tailscale, read files directly
+- Need credentials: SSH via Termius + Cloudflare Tunnel, read files directly
 
 **After (at desk):**
 1. "Update STATUS.md: site visit completed, three APs found"
@@ -443,5 +439,5 @@ export GITHUB_TOKEN="..."
 | Service | How to Start | How to Check |
 |---------|-------------|-------------|
 | Syncthing | `systemctl --user start syncthing` | `systemctl --user status syncthing` |
-| Tailscale | `sudo tailscale up` | `tailscale status` |
-| Telegram Bot (Phase 2) | `systemctl --user start precept-telegram-bot` | `systemctl --user status precept-telegram-bot` |
+| Cloudflare Tunnel | Already running on Proxmox VM | Check Cloudflare Zero Trust dashboard |
+| Telegram Bot (Phase 2) | Proxmox LXC container | Check via Proxmox web UI |
