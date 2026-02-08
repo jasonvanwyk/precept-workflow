@@ -35,8 +35,8 @@ Setting up MCP servers, credentials, and mobile tools so that all Precept projec
 | Remove fetch MCP server | 2026-02-08 | Redundant with built-in WebFetch; reduces MCP context token usage |
 | Update strategy for Proxmox + Cloudflare Tunnel | 2026-02-08 | Replaced Tailscale with Cloudflare Tunnel, bot hosting moved to Proxmox LXC |
 | SSH key auth to dev server | 2026-02-08 | ssh-copy-id to 10.0.10.21, Claude Code can now SSH remotely |
-| Install Syncthing on dev server | 2026-02-08 | systemd user service enabled on 10.0.10.21, ~/incoming-photos/ created |
 | Install LocalSend on dev server | 2026-02-08 | Headless mode via xvfb-run, systemd user service on port 53317 |
+| Drop Syncthing from plan | 2026-02-08 | Git + LocalSend + scp covers all sync needs; Syncthing adds unnecessary complexity |
 | Update docs for iOS + dev server hub | 2026-02-08 | iOS not Android, LocalSend for bulk transfers, dev server as central hub |
 
 ### In Progress
@@ -49,7 +49,7 @@ Setting up MCP servers, credentials, and mobile tools so that all Precept projec
 | Task | Status | Notes |
 |------|--------|-------|
 | Verify Cloudflare Tunnel SSH route | TODO | Phase 1: confirm SSH access from phone via existing tunnel |
-| Enable Syncthing on desktop + pair with dev server | TODO | Phase 1: installed via pacman, needs `systemctl --user enable --now syncthing` + pairing (dev server ID: IAXNI7E-...-HCWWJAV) |
+| Test LocalSend from iPhone to dev server | TODO | Phase 1: verify files arrive in ~/incoming-photos/ on dev server |
 | Build Telegram bot (Phase 2) | TODO | Clone claude-telegram-bridge, deploy on dev server |
 | Template integration (Phase 2) | TODO | Add slash commands, project.yml schema |
 
@@ -60,8 +60,8 @@ Setting up MCP servers, credentials, and mobile tools so that all Precept projec
 1. MCP Stack: 3 servers (Google Workspace, GitHub, Telegram); Fetch removed (redundant with built-in WebFetch)
 2. Telegram over Signal for mobile bot
 3. claude-telegram-bridge as bot starting point
-4. Dev server (10.0.10.21) as central hub -- bot, Syncthing, LocalSend, project files
-5. Syncthing for desktop ↔ dev server sync; LocalSend for iPhone → dev server bulk transfers
+4. Dev server (10.0.10.21) as central hub -- bot, LocalSend, project files
+5. No Syncthing -- git for project sync, LocalSend for iPhone → dev server, scp for ad-hoc
 6. Cloudflare Tunnel for remote access (already configured, no subscription)
 7. Environment variables for secrets (not .env files)
 8. iOS (not Android) -- Telegram, LocalSend, Termius on iPhone

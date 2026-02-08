@@ -30,10 +30,10 @@ Integration and workflow automation for Precept Systems. Connects Claude Code (v
 
 | Component | What It Does |
 |-----------|-------------|
-| MCP Servers | Google Workspace, GitHub, Fetch, Telegram -- configured in `~/.claude.json` |
-| Telegram Bot | Mobile interface for photo filing, voice transcription, status queries |
-| Syncthing | Peer-to-peer file sync between phone and desktop |
-| Tailscale | Mesh VPN for remote SSH access to desktop from phone |
+| MCP Servers | Google Workspace, GitHub, Telegram -- configured in `~/.claude.json` |
+| Telegram Bot | Mobile interface for photo filing, voice transcription, status queries (Phase 2) |
+| LocalSend | Bulk file/photo transfers from iPhone to dev server (10.0.10.21) |
+| Cloudflare Tunnel | Remote SSH access to dev server from phone |
 | Template Integration | Slash commands and conventions that connect projects to these tools |
 
 ## File Organization

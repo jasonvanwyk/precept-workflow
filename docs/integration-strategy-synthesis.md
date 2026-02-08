@@ -364,7 +364,7 @@ From any client site, Jason can:
 - `cat ~/Projects/fairfield-water/STATUS.md` -- check project status
 - `cat ~/Projects/fairfield-water/credentials.txt` -- look up credentials (if kept locally)
 - `git log --oneline -5` -- see recent work
-- Access Syncthing web UI remotely
+- Run `git pull` to get latest project changes
 
 **Already in place**: Cloudflare Tunnel is configured and working (used for the Fairfield water monitoring app). Termius on iOS as SSH client.
 
@@ -407,13 +407,8 @@ From any client site, Jason can:
 |  +--------+---------+    |   ...                            |   |
 |           |              +------------------+---------------+   |
 |  +--------+---------+                       |                   |
-|  | Gemini CLI       |                       | Syncthing         |
-|  | (alternative AI) |                       | (non-git file     |
-|  +------------------+                       |  sync if needed)  |
-|                                             |                   |
-|  +------------------+                       |                   |
-|  | Syncthing        |                       |                   |
-|  | (sync w/ dev svr)|                       |                   |
+|  | Gemini CLI       |                       |                   |
+|  | (alternative AI) |                       |                   |
 |  +------------------+                       |                   |
 |                                             |                   |
 +=============================================|===================+
@@ -433,8 +428,8 @@ From any client site, Jason can:
                |           |            +---------------------+   |
                |           |                                      |
                |  +--------+---------+                            |
-               |  | ~/Projects/      |  Syncthing (sync w/        |
-               |  | (cloned from     |   desktop if needed)       |
+               |  | ~/Projects/      |                            |
+               |  | (cloned from     |                            |
                |  |  GitHub -- source|                            |
                |  |  of truth)       |                            |
                |  +------------------+                            |
@@ -533,7 +528,6 @@ AFTER (at desk):
 | Gemini CLI | Desktop | No -- on-demand | Internet |
 | Telegram Bot | Dev server (10.0.10.21) | Yes (always-on) | Internet (polling) |
 | LocalSend | Dev server (10.0.10.21) | Yes (systemd service, port 53317) | WiFi (receives from iPhone) |
-| Syncthing | Desktop + Dev server | Yes (background) | LAN (peer-to-peer) |
 | Cloudflare Tunnel | Dev server | Yes (always-on) | Internet |
 | Git/GitHub | Desktop + Dev server | No -- on-demand | Internet (for push/pull) |
 | Google Workspace APIs | Google Cloud | Always | Internet |
@@ -555,7 +549,6 @@ AFTER (at desk):
 | 1 | Test: read inbox, check calendar, list Drive files from Claude Code | 15 min | Free |
 | 2 | Configure Cloudflare Tunnel for SSH access (if not already routing to dev server) | 15 min | Free |
 | 2 | Install Termius on iPhone (App Store), test SSH via Cloudflare Tunnel | 10 min | Free |
-| 2 | Set up Syncthing between desktop and dev server (10.0.10.21) for non-git file sync | 20 min | Free |
 | 2 | Set up LocalSend on dev server (headless, systemd service on 10.0.10.21:53317) | 15 min | Free |
 | 2 | Verify LocalSend on iPhone and desktop can send to dev server | 10 min | Free |
 | 2 | Create Telegram bot via @BotFather, note token | 5 min | Free |
@@ -793,7 +786,7 @@ project-root/
 | Telegram over Signal for bot | Signal via signal-cli | Telegram: official Bot API, 2-minute setup, rich media handling, massive ecosystem. Signal: no official bot API, immature tooling. |
 | claude-telegram-bridge as starting point | claude-code-telegram, OpenClaw, custom build | Built-in vision + Whisper transcription + streaming. claude-code-telegram is a good fallback. OpenClaw is overkill for v1. |
 | Dev server as central hub | Desktop systemd, VPS, Raspberry Pi | Always-on (survives desktop reboots), runs Telegram bot + LocalSend + project clones, Jason already runs Proxmox, no additional cost. |
-| LocalSend for bulk phone transfers | Syncthing on phone, AirDrop, Google Drive, manual USB | Direct WiFi transfer to dev server, no cloud, free, works with iOS. Syncthing kept for desktop-to-dev-server sync only. |
+| LocalSend for bulk phone transfers | Syncthing, AirDrop, Google Drive, manual USB | Direct WiFi transfer to dev server, no cloud, free, works with iOS. No Syncthing needed -- git handles project sync, scp for ad-hoc. |
 | Cloudflare Tunnel for remote access | Tailscale, WireGuard (manual), SSH port forwarding, ngrok | Already configured and working (hosts Fairfield water monitoring app), no subscription needed, no additional setup. |
 | Whisper API over self-hosted | Self-hosted whisper.cpp, on-device NotelyVoice, Google Speech-to-Text | API is simplest to start (R1-2 per site visit). Self-hosted added in Phase 3 if cost or privacy becomes a concern. |
 | 3 MCP servers initially | More servers, fewer servers | Sweet spot: Google Workspace + GitHub + Telegram cover 90% of use cases. Fetch, Filesystem, and Desktop Commander are redundant with Claude Code built-ins. |
@@ -816,8 +809,7 @@ go install github.com/steipete/gogcli/cmd/gog@latest   # Google CLI
 pip install gcalcli                     # Calendar CLI
 # himalaya: install from AUR or GitHub releases
 
-# Sync and automation
-sudo pacman -S syncthing                # File sync with dev server (not phone)
+# Automation
 sudo pacman -S inotify-tools            # For gitwatch/file watchers
 pip install gitwatch                    # Auto-commit on file changes
 
@@ -867,7 +859,6 @@ export OPENAI_API_KEY="sk-..."
 | Google Workspace MCP tokens | `~/.config/workspace-mcp/` (auto-created) | 700 |
 | gcalcli OAuth token | `~/.local/share/gcalcli/oauth` | 600 |
 | gogcli credentials | System keyring (GNOME Keyring) | Encrypted |
-| Syncthing config | `~/.config/syncthing/` (desktop + dev server) | 700 |
 | Telegram bot code | Dev server (10.0.10.21) | Deployed via git clone |
 | LocalSend config | Dev server systemd service | 700 |
 | Field capture staging | `~/incoming-photos/` on dev server (LocalSend target) | Normal |

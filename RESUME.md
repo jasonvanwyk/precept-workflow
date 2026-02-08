@@ -2,8 +2,8 @@
 
 ## Right Now
 **Phase:** Phase 1 - Foundation Setup
-**Last:** Syncthing + LocalSend installed on dev server, Syncthing installed on desktop (not yet enabled/paired), all docs updated for iOS + dev server hub (2026-02-08)
-**Next:** Enable Syncthing on desktop and pair with dev server, verify Cloudflare Tunnel SSH from phone, test LocalSend from iPhone to dev server
+**Last:** LocalSend installed on dev server, all docs updated for iOS + dev server hub, Syncthing dropped (2026-02-08)
+**Next:** Verify Cloudflare Tunnel SSH from phone, test LocalSend from iPhone to dev server
 **Blocked:** Nothing
 
 ## Quick Context
@@ -21,8 +21,8 @@
 - Fetch MCP removed (redundant with built-in WebFetch)
 - Strategy revised: Cloudflare Tunnel replaces Tailscale, dev server replaces desktop for services
 - SSH key auth set up: desktop → dev server (10.0.10.21)
-- Syncthing installed and running on dev server (systemd user service)
 - LocalSend installed headless on dev server (systemd user service, port 53317)
+- Syncthing dropped -- git handles project sync, LocalSend handles phone transfers, scp for ad-hoc
 - ~/incoming-photos/ created on dev server for file staging
 
 ## Key Files
@@ -38,8 +38,7 @@
 - [x] Add Telegram MCP to ~/.claude.json
 - [x] Test all MCP servers (all 3 working + built-in WebFetch)
 - [x] SSH key auth to dev server (10.0.10.21)
-- [x] Syncthing on dev server (systemd service)
 - [x] LocalSend on dev server (headless, systemd service)
-- [ ] Enable Syncthing on desktop and pair with dev server (installed, not yet enabled)
+- [x] Syncthing dropped (git + LocalSend + scp covers all sync needs)
 - [ ] Verify Cloudflare Tunnel SSH from phone
 - [ ] Create Telegram bot via @BotFather (Phase 2)

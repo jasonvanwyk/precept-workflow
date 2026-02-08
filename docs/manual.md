@@ -25,7 +25,6 @@ Precept Workflow connects your tools so you can manage ICT projects without leav
 - **Claude Code + MCP Servers** -- Read/send email, check calendar, manage GitHub repos, and message via Telegram -- all from within a Claude Code session
 - **Telegram Bot** (Phase 2) -- Primary mobile interface: send photos, voice notes, and status queries from your iPhone to the correct project folder; runs on the dev server (10.0.10.21)
 - **LocalSend** -- Bulk file/photo transfers from iPhone to dev server over WiFi (no cloud)
-- **Syncthing** -- Sync files between desktop and dev server (not phone)
 - **Cloudflare Tunnel** -- SSH into the dev server from any client site via your phone (already configured)
 
 ### What are MCP Servers?
@@ -57,11 +56,9 @@ DESKTOP (Arch Linux)
 |                                           |
 |  ~/Projects/ (pulled from GitHub,         |
 |    pushed back when done)                 |
-|                                           |
-|  Syncthing (sync with dev server)         |
 +------------------------------------------+
          |              |
-    Google APIs    Syncthing/GitHub
+    Google APIs       GitHub
          |              |
 +------------------------------------------+
 |  DEV SERVER (10.0.10.21)                  |
@@ -237,24 +234,7 @@ Already configured and working (used for the Fairfield water monitoring app).
   ssh jason@<cloudflare-tunnel-hostname>
   ```
 
-### 3.5 Syncthing (Desktop <-> Dev Server Sync)
-
-Syncthing is used between the desktop and the dev server (10.0.10.21) for non-git file sync. It is NOT used on the phone -- LocalSend handles phone-to-dev-server transfers.
-
-- [ ] **Install on Desktop** (~5 min)
-  ```bash
-  # Jason runs manually:
-  sudo pacman -S syncthing
-  systemctl --user enable --now syncthing
-  ```
-  Access web UI at http://127.0.0.1:8384
-
-- [ ] **Pair with Dev Server** (~5 min)
-  1. In desktop Syncthing web UI: Add Remote Device > paste dev server device ID
-  2. On dev server: accept the pairing request
-  3. Create shared folders as needed for non-git file sync
-
-### 3.6 LocalSend (iPhone -> Dev Server Bulk Transfers)
+### 3.5 LocalSend (iPhone -> Dev Server Bulk Transfers)
 
 LocalSend is already set up on the dev server (headless, systemd service on 10.0.10.21:53317) and on the iPhone and desktop.
 
@@ -269,13 +249,13 @@ LocalSend is already set up on the dev server (headless, systemd service on 10.0
   3. Dev server should appear as a target on the same WiFi network
   4. Verify files arrive in `~/incoming-photos/` on dev server
 
-### 3.7 iPhone Apps
+### 3.6 iPhone Apps
 
 - [ ] Install **Telegram** (App Store) -- Primary mobile interface (bot for photo filing, voice transcription, status queries)
 - [ ] Install **LocalSend** (App Store) -- Bulk file/photo transfers to dev server
 - [ ] Install **Termius** (App Store) -- SSH client (via Cloudflare Tunnel)
 
-### 3.8 Desktop CLI Tools (Optional)
+### 3.7 Desktop CLI Tools (Optional)
 
 These are nice-to-have CLI tools that share the same Google OAuth credentials:
 
@@ -407,14 +387,6 @@ Always run `/project:wrap-up` before closing Claude Code. This:
 1. Are `TELEGRAM_API_ID` and `TELEGRAM_API_HASH` set?
 2. First run may require interactive phone verification -- run `uvx telegram-mcp` manually once to complete setup.
 
-### Syncthing Not Syncing (Desktop <-> Dev Server)
-
-**Check:**
-1. Are both machines on the same network?
-2. Is Syncthing running on desktop? `systemctl --user status syncthing`
-3. Is Syncthing running on dev server? `ssh jason@10.0.10.21 systemctl --user status syncthing`
-4. Check the web UI at http://127.0.0.1:8384
-
 ### LocalSend Not Receiving (Dev Server)
 
 **Check:**
@@ -464,8 +436,6 @@ export GITHUB_TOKEN="..."
 
 | Service | Where | How to Start | How to Check |
 |---------|-------|-------------|-------------|
-| Syncthing (desktop) | Desktop | `systemctl --user start syncthing` | `systemctl --user status syncthing` |
-| Syncthing (dev server) | 10.0.10.21 | `systemctl --user start syncthing` | `systemctl --user status syncthing` |
 | LocalSend | Dev server (10.0.10.21) | `systemctl start localsend` | `systemctl status localsend` |
 | Cloudflare Tunnel | Dev server (10.0.10.21) | Already running | Check Cloudflare Zero Trust dashboard |
 | Telegram Bot (Phase 2) | Dev server (10.0.10.21) | systemd service | `systemctl status precept-bot` |
