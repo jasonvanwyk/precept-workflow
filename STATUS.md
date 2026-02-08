@@ -42,6 +42,7 @@ Setting up MCP servers, credentials, and mobile tools so that all Precept projec
 | Test LocalSend from iPhone to dev server | 2026-02-08 | 2 HEIC photos received in ~/incoming-photos/, auto-accept enabled |
 | Cloudflare Tunnel SSH to dev server | 2026-02-08 | cloudflared installed, tunnel "dev-server", browser SSH at ssh.meter-tracker.com, Zero Trust Access with email OTP |
 | Desktop SSH via Cloudflare Tunnel | 2026-02-08 | ProxyCommand in ~/.ssh/config, ssh jason@ssh.meter-tracker.com works |
+| Laptop setup (jason-laptop, 10.0.10.112) | 2026-02-08 | Cloudflare Tunnel SSH + network diagnostic tools (nmap, wireshark, wavemon, iperf3, etc.) |
 
 ### In Progress
 

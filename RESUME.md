@@ -2,7 +2,7 @@
 
 ## Right Now
 **Phase:** Phase 1 COMPLETE -- ready for Phase 2
-**Last:** Phase 1 finished: Cloudflare Tunnel SSH working (browser-based via ssh.meter-tracker.com), LocalSend tested from iPhone to dev server, VLAN fix for TP-Link AP (2026-02-08)
+**Last:** Laptop (10.0.10.112) set up with Cloudflare Tunnel SSH + network diagnostic tools (2026-02-08)
 **Next:** Phase 2 -- Create Telegram bot via @BotFather, build and deploy on dev server
 **Blocked:** Nothing
 
@@ -27,6 +27,7 @@
 - VLAN fix: switch port 10 moved from VLAN 1 → VLAN 10 so TP-Link WiFi clients can see dev server
 - Cloudflare Tunnel SSH: cloudflared on dev server, browser-based SSH via https://ssh.meter-tracker.com
 - Desktop SSH via ProxyCommand in ~/.ssh/config (cloudflared access ssh)
+- Laptop (jason-laptop, 10.0.10.112) set up: cloudflared + SSH config + network diagnostic suite
 
 ## Key Files
 - `STATUS.md` - Full project tracking
