@@ -2,23 +2,30 @@
 
 ## Right Now
 **Phase:** Phase 1 - Foundation Setup
-**Last:** Project scaffolded, pushed to GitHub, started setup checklist (2026-02-08)
-**Next:** Google Cloud OAuth setup (Step 1 of checklist -- see docs/manual.md Section 3.1)
-**Blocked:** All MCP testing blocked on credentials
+**Last:** All credentials configured -- Google OAuth, GitHub PAT, Telegram API (2026-02-08)
+**Next:** Restart Claude Code and test all MCP servers (Google, GitHub, Telegram)
+**Blocked:** Nothing -- ready to test
 
 ## Quick Context
 - Internal tooling project for Precept Systems
 - Connects Claude Code to Google Workspace, GitHub, Telegram via MCP servers
 - Mobile workflow via Telegram bot + Syncthing + Tailscale
-- Prerequisites confirmed: uvx, npx, gh all installed; ~/.config/precept/ created
-- Setup checklist is in docs/manual.md -- work through Section 3 step by step
+- All 4 MCP servers configured in ~/.claude.json (google-workspace, github, fetch, telegram)
+- All credentials exported in ~/.bashrc
+- Google OAuth first-run will prompt browser auth on first use
+- Telegram MCP may need interactive phone verification on first connect
 
 ## Recent Progress
-- Moved strategy docs and research into dedicated project
-- Created practical manual (docs/manual.md)
-- Pushed to GitHub (jasonvanwyk/precept-workflow)
-- Confirmed prerequisites (uvx 0.9.9, npx/node 25.1.0, gh 2.86.0)
-- Created ~/.config/precept/ directory (chmod 700)
+- gh CLI authenticated (jasonvanwyk, SSH, key uploaded)
+- GITHUB_TOKEN exported dynamically via `gh auth token`
+- Google Cloud project created (Precept-AI-Tools, ID: precept-ai-tools)
+- 6 Google APIs enabled (Gmail, Calendar, Drive, Docs, Sheets, Slides)
+- OAuth consent screen configured, scopes added, published to production
+- OAuth client created (Desktop app, "Claude Code Integration")
+- Credentials JSON saved to ~/.config/precept/google-credentials.json
+- GOOGLE_OAUTH_CLIENT_ID + SECRET exported in .bashrc
+- Telegram API app created (Precept Tools), api_id + api_hash in .bashrc
+- Telegram MCP server added to ~/.claude.json
 
 ## Key Files
 - `STATUS.md` - Full project tracking
@@ -27,9 +34,10 @@
 - `docs/research/` - Planning research reports
 
 ## Open Items
-- [ ] Google Cloud OAuth setup (~30 min)
-- [ ] GitHub PAT creation (~5 min)
-- [ ] Telegram bot + API credentials (~15 min)
-- [ ] Add Telegram MCP to ~/.claude.json
-- [ ] Test all MCP servers
+- [x] Google Cloud OAuth setup
+- [x] GitHub PAT creation
+- [x] Telegram API credentials
+- [x] Add Telegram MCP to ~/.claude.json
+- [ ] Test all MCP servers (restart Claude Code first)
+- [ ] Create Telegram bot via @BotFather (Phase 2)
 - [ ] Install Tailscale, Syncthing, phone apps

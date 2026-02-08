@@ -32,10 +32,10 @@ Setting up MCP servers, credentials, and mobile tools so that all Precept projec
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Google Cloud OAuth setup | TODO | Create project, enable APIs, create credentials |
-| GitHub PAT creation | TODO | Generate token, export as GITHUB_TOKEN |
-| Telegram bot + API credentials | TODO | @BotFather for bot, my.telegram.org for API |
-| Add Telegram MCP to ~/.claude.json | TODO | After API credentials exist |
+| Google Cloud OAuth setup | DONE | Project: precept-ai-tools, 6 APIs enabled, credentials in .bashrc |
+| GitHub PAT creation | DONE | gh auth login + dynamic export in .bashrc |
+| Telegram API credentials | DONE | api_id + api_hash in .bashrc |
+| Add Telegram MCP to ~/.claude.json | DONE | telegram-mcp server added |
 
 ### Planned
 
