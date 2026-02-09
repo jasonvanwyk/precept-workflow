@@ -1,6 +1,6 @@
 # Project Status - Precept Workflow
 
-**Last Updated:** 2026-02-08
+**Last Updated:** 2026-02-09
 **Project Metadata:** See `project.yml`
 
 ---
@@ -48,7 +48,7 @@ Setting up MCP servers, credentials, and mobile tools so that all Precept projec
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Build Telegram bot (Phase 2) | In Progress | Bot code written (src/telegram-bot/), awaiting bot token + deploy |
+| Build Telegram bot (Phase 2) | In Progress | Code written, deployed to dev server, awaiting bot token + secrets from Jason |
 
 ### Planned
 

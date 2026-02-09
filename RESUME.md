@@ -1,10 +1,10 @@
 # Project Resume
 
 ## Right Now
-**Phase:** Phase 1 COMPLETE -- ready for Phase 2
-**Last:** Laptop (10.0.10.112) set up with Cloudflare Tunnel SSH + network diagnostic tools (2026-02-08)
-**Next:** Phase 2 -- Create Telegram bot via @BotFather, build and deploy on dev server
-**Blocked:** Nothing
+**Phase:** Phase 2 IN PROGRESS -- Telegram bot
+**Last:** Bot code written and partially deployed to dev server (2026-02-09)
+**Next:** Jason provides bot token + OpenAI key + user ID, then start service and test
+**Blocked:** Waiting on 3 secrets (TELEGRAM_BOT_TOKEN, OPENAI_API_KEY, ALLOWED_USER_ID)
 
 ## Quick Context
 - Internal tooling project for Precept Systems
@@ -17,20 +17,36 @@
 - SSH key auth configured: desktop → dev server
 
 ## Recent Progress
-- All 3 MCP servers tested and working (Google Workspace, GitHub, Telegram)
-- Fetch MCP removed (redundant with built-in WebFetch)
-- Strategy revised: Cloudflare Tunnel replaces Tailscale, dev server replaces desktop for services
-- SSH key auth set up: desktop → dev server (10.0.10.21)
-- LocalSend installed headless on dev server (systemd user service, port 53317)
-- LocalSend tested: iPhone → dev server ~/incoming-photos/ working
-- Syncthing dropped -- git handles project sync, LocalSend handles phone transfers, scp for ad-hoc
-- VLAN fix: switch port 10 moved from VLAN 1 → VLAN 10 so TP-Link WiFi clients can see dev server
-- Cloudflare Tunnel SSH: cloudflared on dev server, browser-based SSH via https://ssh.meter-tracker.com
-- Desktop SSH via ProxyCommand in ~/.ssh/config (cloudflared access ssh)
-- Laptop (jason-laptop, 10.0.10.112) set up: cloudflared + SSH config + network diagnostic suite
+- Telegram bot code written: src/telegram-bot/ (bot.py, config.py, requirements.txt)
+- Bot features: /project (fuzzy match), /projects, /status, photo filing + git commit, voice transcription via Whisper + git commit, single-user whitelist
+- Systemd service file + deploy README created in src/telegram-bot/deploy/
+- Repo cloned to dev server ~/Projects/precept-workflow
+- Python venv created + dependencies installed on dev server
+- Systemd user service installed (precept-bot.service)
+- .gitignore updated with Python entries
+
+## What Jason Needs To Do Before Next Session
+1. Create bot via @BotFather on Telegram -- get the bot token
+2. Message @userinfobot on Telegram -- get your user ID
+3. Get an OpenAI API key from https://platform.openai.com/api-keys
+4. SSH to dev server and create the env file:
+   ```bash
+   cat > ~/.config/precept/telegram-bot.env << 'EOF'
+   TELEGRAM_BOT_TOKEN=your-bot-token-here
+   OPENAI_API_KEY=sk-your-openai-key-here
+   ALLOWED_USER_ID=your-telegram-user-id
+   EOF
+   chmod 600 ~/.config/precept/telegram-bot.env
+   ```
+5. Enable lingering (needs sudo on dev server):
+   ```bash
+   sudo loginctl enable-linger jason
+   ```
 
 ## Key Files
 - `STATUS.md` - Full project tracking
+- `src/telegram-bot/` - Bot source code
+- `src/telegram-bot/deploy/README.md` - Full deployment instructions
 - `docs/manual.md` - Setup and usage guide
 - `docs/integration-strategy-synthesis.md` - Full strategy document
 - `docs/research/` - Planning research reports
@@ -48,4 +64,8 @@
 - [x] Cloudflare Tunnel SSH from phone (browser-based terminal via ssh.meter-tracker.com)
 - [x] Cloudflare Tunnel SSH from desktop (ProxyCommand cloudflared access ssh)
 - [x] VLAN fix: TP-Link AP switch port moved to VLAN 10
-- [ ] Create Telegram bot via @BotFather (Phase 2)
+- [x] Bot code written (src/telegram-bot/)
+- [x] Bot deployed to dev server (repo cloned, venv, systemd service installed)
+- [ ] Create Telegram bot via @BotFather + provide secrets
+- [ ] Start service and test from iPhone
+- [ ] Enable lingering on dev server (sudo)
