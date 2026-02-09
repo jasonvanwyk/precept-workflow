@@ -48,12 +48,12 @@ Setting up MCP servers, credentials, and mobile tools so that all Precept projec
 
 | Task | Status | Notes |
 |------|--------|-------|
+| Build Telegram bot (Phase 2) | In Progress | Bot code written (src/telegram-bot/), awaiting bot token + deploy |
 
 ### Planned
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Build Telegram bot (Phase 2) | TODO | Create bot via @BotFather, clone claude-telegram-bridge, deploy on dev server |
 | Template integration (Phase 2) | TODO | Add slash commands, project.yml schema |
 
 ---

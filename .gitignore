@@ -29,6 +29,13 @@ secrets/
 *.db
 *.sqlite
 
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+
 # Node.js (for bot code)
 node_modules/
 package-lock.json

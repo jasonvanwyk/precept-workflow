@@ -1,0 +1,15 @@
+[Unit]
+Description=Precept Telegram Bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/Projects/precept-workflow/src/telegram-bot
+ExecStart=%h/Projects/precept-workflow/src/telegram-bot/venv/bin/python bot.py
+EnvironmentFile=%h/.config/precept/telegram-bot.env
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target
