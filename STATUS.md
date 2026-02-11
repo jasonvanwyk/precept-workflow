@@ -1,6 +1,6 @@
 # Project Status - Precept Workflow
 
-**Last Updated:** 2026-02-09
+**Last Updated:** 2026-02-11
 **Project Metadata:** See `project.yml`
 
 ---
@@ -43,6 +43,7 @@ Setting up MCP servers, credentials, and mobile tools so that all Precept projec
 | Cloudflare Tunnel SSH to dev server | 2026-02-08 | cloudflared installed, tunnel "dev-server", browser SSH at ssh.meter-tracker.com, Zero Trust Access with email OTP |
 | Desktop SSH via Cloudflare Tunnel | 2026-02-08 | ProxyCommand in ~/.ssh/config, ssh jason@ssh.meter-tracker.com works |
 | Laptop setup (jason-laptop, 10.0.10.112) | 2026-02-08 | Cloudflare Tunnel SSH + network diagnostic tools (nmap, wireshark, wavemon, iperf3, etc.) |
+| Write AI services strategy | 2026-02-11 | See docs/ai-services-strategy.md -- 4-tier service offering, SaaS repricing analysis, Anthropic Console delivery toolkit |
 
 ### In Progress
 
@@ -55,6 +56,10 @@ Setting up MCP servers, credentials, and mobile tools so that all Precept projec
 | Task | Status | Notes |
 |------|--------|-------|
 | Template integration (Phase 2) | TODO | Add slash commands, project.yml schema |
+| Anthropic Console setup | TODO | Prompt Generator, Workbench, Evaluations -- delivery toolkit for client work |
+| Build internal workflow automations | TODO | 2-3 automations as case studies and templates for client deployments |
+| Package AI service offering | TODO | Proposal templates, pricing for 4 tiers, scope definitions |
+| Pilot with 1-2 existing clients | TODO | Start with Tier 1 audit, then Tier 2 build for highest-value workflows |
 
 ---
 

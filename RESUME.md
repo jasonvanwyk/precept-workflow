@@ -1,8 +1,8 @@
 # Project Resume
 
 ## Right Now
-**Phase:** Phase 2 IN PROGRESS -- Telegram bot
-**Last:** Bot code written and partially deployed to dev server (2026-02-09)
+**Phase:** Phase 2 IN PROGRESS -- Telegram bot + AI services strategy
+**Last:** Wrote AI services strategy doc based on SaaS repricing analysis (2026-02-11)
 **Next:** Jason provides bot token + OpenAI key + user ID, then start service and test
 **Blocked:** Waiting on 3 secrets (TELEGRAM_BOT_TOKEN, OPENAI_API_KEY, ALLOWED_USER_ID)
 
@@ -17,13 +17,9 @@
 - SSH key auth configured: desktop → dev server
 
 ## Recent Progress
+- AI services strategy doc written (docs/ai-services-strategy.md) -- defines 4-tier service offering for AI workflow transformation, covers the $285B SaaS repricing, KPMG precedent, Anthropic Developer Console toolkit
 - Telegram bot code written: src/telegram-bot/ (bot.py, config.py, requirements.txt)
-- Bot features: /project (fuzzy match), /projects, /status, photo filing + git commit, voice transcription via Whisper + git commit, single-user whitelist
-- Systemd service file + deploy README created in src/telegram-bot/deploy/
-- Repo cloned to dev server ~/Projects/precept-workflow
-- Python venv created + dependencies installed on dev server
-- Systemd user service installed (precept-bot.service)
-- .gitignore updated with Python entries
+- Bot deployed to dev server (repo cloned, venv, systemd service installed)
 
 ## What Jason Needs To Do Before Next Session
 1. Create bot via @BotFather on Telegram -- get the bot token
@@ -45,11 +41,20 @@
 
 ## Key Files
 - `STATUS.md` - Full project tracking
+- `docs/ai-services-strategy.md` - AI services strategy (4-tier offering, delivery toolkit)
 - `src/telegram-bot/` - Bot source code
 - `src/telegram-bot/deploy/README.md` - Full deployment instructions
 - `docs/manual.md` - Setup and usage guide
-- `docs/integration-strategy-synthesis.md` - Full strategy document
+- `docs/integration-strategy-synthesis.md` - Integration strategy document
 - `docs/research/` - Planning research reports
+
+## Roadmap (from AI services strategy)
+1. Get bot running + tested (blocked on secrets)
+2. Anthropic Console account setup (Prompt Generator, Workbench, Evaluations)
+3. Build 2-3 internal workflow automations (case studies for client work)
+4. Document the stack (repeatable playbook)
+5. Package service offering (proposal templates, pricing for 4 tiers)
+6. Pilot with 1-2 existing clients (start with Tier 1 audit)
 
 ## Open Items
 - [x] Google Cloud OAuth setup
@@ -66,6 +71,10 @@
 - [x] VLAN fix: TP-Link AP switch port moved to VLAN 10
 - [x] Bot code written (src/telegram-bot/)
 - [x] Bot deployed to dev server (repo cloned, venv, systemd service installed)
+- [x] AI services strategy document written
 - [ ] Create Telegram bot via @BotFather + provide secrets
 - [ ] Start service and test from iPhone
 - [ ] Enable lingering on dev server (sudo)
+- [ ] Anthropic Console setup (Prompt Generator, Workbench, Evaluations)
+- [ ] Build internal workflow automations (case studies)
+- [ ] Package service offering (proposals, pricing)
