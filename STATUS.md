@@ -55,6 +55,7 @@ Setting up MCP servers, credentials, and mobile tools so that all Precept projec
 
 | Task | Status | Notes |
 |------|--------|-------|
+| SQLite operational database | TODO | Bot event log, photo metadata, task/time tracking, client touchpoints -- queryable by bot and Claude Code |
 | Template integration (Phase 2) | TODO | Add slash commands, project.yml schema |
 | Anthropic Console setup | TODO | Prompt Generator, Workbench, Evaluations -- delivery toolkit for client work |
 | Build internal workflow automations | TODO | 2-3 automations as case studies and templates for client deployments |
@@ -73,3 +74,4 @@ Setting up MCP servers, credentials, and mobile tools so that all Precept projec
 6. Cloudflare Tunnel for remote SSH (tunnel "dev-server", browser SSH at ssh.meter-tracker.com, Zero Trust email OTP)
 7. Environment variables for secrets (not .env files)
 8. iOS (not Android) -- Telegram, LocalSend, Termius on iPhone
+9. SQLite for structured operational data (not vector DB) -- RAG unnecessary at current doc scale, Claude Code reads files directly

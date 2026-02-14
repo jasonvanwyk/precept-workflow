@@ -2,8 +2,8 @@
 
 ## Right Now
 **Phase:** Phase 2 IN PROGRESS -- Telegram bot + AI services strategy
-**Last:** Wrote AI services strategy doc based on SaaS repricing analysis (2026-02-11)
-**Next:** Jason provides bot token + OpenAI key + user ID, then start service and test
+**Last:** Added SQLite database to plan for bot operational data (2026-02-14)
+**Next:** Jason provides bot token + OpenAI key + user ID, then start service and test; after bot is live, add SQLite
 **Blocked:** Waiting on 3 secrets (TELEGRAM_BOT_TOKEN, OPENAI_API_KEY, ALLOWED_USER_ID)
 
 ## Quick Context
@@ -50,11 +50,12 @@
 
 ## Roadmap (from AI services strategy)
 1. Get bot running + tested (blocked on secrets)
-2. Anthropic Console account setup (Prompt Generator, Workbench, Evaluations)
-3. Build 2-3 internal workflow automations (case studies for client work)
-4. Document the stack (repeatable playbook)
-5. Package service offering (proposal templates, pricing for 4 tiers)
-6. Pilot with 1-2 existing clients (start with Tier 1 audit)
+2. Add SQLite operational database (bot event log, photo metadata, task/time tracking)
+3. Anthropic Console account setup (Prompt Generator, Workbench, Evaluations)
+4. Build 2-3 internal workflow automations (case studies for client work)
+5. Document the stack (repeatable playbook)
+6. Package service offering (proposal templates, pricing for 4 tiers)
+7. Pilot with 1-2 existing clients (start with Tier 1 audit)
 
 ## Open Items
 - [x] Google Cloud OAuth setup
@@ -75,6 +76,7 @@
 - [ ] Create Telegram bot via @BotFather + provide secrets
 - [ ] Start service and test from iPhone
 - [ ] Enable lingering on dev server (sudo)
+- [ ] Add SQLite database (bot event log, photo metadata, task/time tracking, client touchpoints)
 - [ ] Anthropic Console setup (Prompt Generator, Workbench, Evaluations)
 - [ ] Build internal workflow automations (case studies)
 - [ ] Package service offering (proposals, pricing)
