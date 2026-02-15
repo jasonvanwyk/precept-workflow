@@ -6,6 +6,8 @@ Single-user bot: silently ignores messages from unauthorized users.
 """
 
 import logging
+from collections import defaultdict
+from datetime import datetime, time as dt_time, timedelta
 
 from telegram import Update
 from telegram.ext import (
@@ -35,12 +37,32 @@ logger = logging.getLogger("precept-bot")
 
 
 class AuthFilter(filters.MessageFilter):
-    """Only allow messages from the configured user."""
+    """Only allow messages from the configured user, with rate limiting."""
+
+    MAX_PER_MINUTE = 30
+
+    def __init__(self):
+        super().__init__()
+        self._timestamps = defaultdict(list)
 
     def filter(self, message):
         if message.from_user is None:
             return False
-        return message.from_user.id == config.ALLOWED_USER_ID
+        if message.from_user.id != config.ALLOWED_USER_ID:
+            return False
+
+        # Rate limit: sliding 60-second window
+        user_id = message.from_user.id
+        now = datetime.now()
+        cutoff = now - timedelta(minutes=1)
+        self._timestamps[user_id] = [
+            t for t in self._timestamps[user_id] if t > cutoff
+        ]
+        if len(self._timestamps[user_id]) >= self.MAX_PER_MINUTE:
+            logger.warning("Rate limit exceeded for user %s", user_id)
+            return False
+        self._timestamps[user_id].append(now)
+        return True
 
 
 AUTH = AuthFilter()
@@ -49,6 +71,27 @@ AUTH = AuthFilter()
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
+
+
+def setup_reminders(app):
+    """Schedule daily morning and afternoon reminder jobs."""
+    job_queue = app.job_queue
+
+    # Morning briefing at 07:30 SAST
+    job_queue.run_daily(
+        handlers.morning_briefing,
+        time=dt_time(7, 30, tzinfo=config.TIMEZONE),
+        name="morning_briefing",
+    )
+
+    # Afternoon wrap-up at 16:30 SAST
+    job_queue.run_daily(
+        handlers.afternoon_wrapup,
+        time=dt_time(16, 30, tzinfo=config.TIMEZONE),
+        name="afternoon_wrapup",
+    )
+
+    logger.info("Daily reminders scheduled (07:30 + 16:30 SAST)")
 
 
 def main():
@@ -78,6 +121,7 @@ def main():
                 CallbackQueryHandler(handlers.visit_callback, pattern=f"^{menus.VISIT_CB}"),
                 CallbackQueryHandler(handlers.task_callback, pattern=f"^{menus.TASK_CB}"),
                 CallbackQueryHandler(handlers.project_callback, pattern=f"^({menus.PROJECT_CB}|{menus.PAGE_CB})"),
+                CallbackQueryHandler(handlers.note_save_callback, pattern="^save_as_note$"),
                 CallbackQueryHandler(lambda u, c: handlers.MAIN_MENU, pattern="^noop$"),
                 # Slash commands (legacy fallbacks)
                 CommandHandler("project", handlers.cmd_project, AUTH),
@@ -90,6 +134,7 @@ def main():
                 CommandHandler("search", handlers.cmd_search, AUTH),
                 CommandHandler("recent", handlers.cmd_recent, AUTH),
                 CommandHandler("visits", handlers.cmd_visits, AUTH),
+                CommandHandler("reminders", handlers.cmd_reminders, AUTH),
                 CommandHandler("cancel", handlers.cancel, AUTH),
                 # Media handlers
                 MessageHandler(AUTH & filters.PHOTO, handlers.handle_photo),
@@ -144,6 +189,8 @@ def main():
     )
 
     app.add_handler(conv)
+
+    setup_reminders(app)
 
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 

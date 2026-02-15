@@ -8,6 +8,8 @@ import os
 import sys
 from pathlib import Path
 
+import pytz
+
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 ALLOWED_USER_ID = int(os.environ.get("ALLOWED_USER_ID", "0"))
@@ -24,6 +26,9 @@ MAX_MESSAGE_LENGTH = 4096
 
 # Date format used in filenames
 DATE_FORMAT = "%Y-%m-%d"
+
+# Timezone -- SAST (UTC+2), no DST
+TIMEZONE = pytz.timezone("Africa/Johannesburg")
 
 
 def validate():

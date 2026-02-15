@@ -85,6 +85,16 @@ MIGRATIONS = [
         visit_id INTEGER
     );
     """,
+    # Migration 2: quick notes table
+    """
+    CREATE TABLE IF NOT EXISTS quick_notes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        project TEXT NOT NULL,
+        text TEXT NOT NULL,
+        visit_id INTEGER,
+        created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+    );
+    """,
 ]
 
 
@@ -204,6 +214,23 @@ def log_event(
         conn.close()
 
 
+def log_quick_note(
+    project: str, text: str, visit_id: int | None = None
+) -> int:
+    """Log a quick note and return its row id."""
+    conn = _get_conn()
+    try:
+        cur = conn.execute(
+            "INSERT INTO quick_notes (project, text, visit_id) VALUES (?, ?, ?)",
+            (project, text, visit_id),
+        )
+        conn.commit()
+        log_event("quick_note", text[:100], project)
+        return cur.lastrowid
+    finally:
+        conn.close()
+
+
 # ---------------------------------------------------------------------------
 # Site visits
 # ---------------------------------------------------------------------------
@@ -255,6 +282,9 @@ def end_visit(visit_id: int, notes: str | None = None) -> dict | None:
         scan_count = conn.execute(
             "SELECT COUNT(*) FROM network_scans WHERE visit_id = ?", (visit_id,)
         ).fetchone()[0]
+        note_count = conn.execute(
+            "SELECT COUNT(*) FROM quick_notes WHERE visit_id = ?", (visit_id,)
+        ).fetchone()[0]
 
         # Calculate duration
         started = datetime.fromisoformat(visit["started_at"])
@@ -268,7 +298,7 @@ def end_visit(visit_id: int, notes: str | None = None) -> dict | None:
             f"{' at ' + visit['location'] if visit['location'] else ''}\n"
             f"Duration: {hours}h {minutes}m\n"
             f"Photos: {photo_count}, Voice notes: {voice_count}, "
-            f"Tasks: {task_count}, Scans: {scan_count}"
+            f"Notes: {note_count}, Tasks: {task_count}, Scans: {scan_count}"
         )
         if notes:
             summary += f"\nNotes: {notes}"
@@ -289,6 +319,7 @@ def end_visit(visit_id: int, notes: str | None = None) -> dict | None:
             "duration": f"{hours}h {minutes}m",
             "photo_count": photo_count,
             "voice_count": voice_count,
+            "note_count": note_count,
             "task_count": task_count,
             "scan_count": scan_count,
             "notes": notes,
@@ -416,15 +447,27 @@ def log_scan(
 
 
 def search_transcripts(query: str, limit: int = 10) -> list[dict]:
-    """Search voice note transcripts for a keyword."""
+    """Search voice note transcripts and quick notes for a keyword."""
     conn = _get_conn()
     try:
-        rows = conn.execute(
-            "SELECT id, project, filepath, transcript, created_at FROM voice_notes "
-            "WHERE transcript LIKE ? ORDER BY created_at DESC LIMIT ?",
+        # Voice transcripts
+        voice_rows = conn.execute(
+            "SELECT id, project, filepath, transcript AS text, 'voice' AS source, created_at "
+            "FROM voice_notes WHERE transcript LIKE ? "
+            "ORDER BY created_at DESC LIMIT ?",
             (f"%{query}%", limit),
         ).fetchall()
-        return [dict(r) for r in rows]
+        # Quick notes
+        note_rows = conn.execute(
+            "SELECT id, project, NULL AS filepath, text, 'note' AS source, created_at "
+            "FROM quick_notes WHERE text LIKE ? "
+            "ORDER BY created_at DESC LIMIT ?",
+            (f"%{query}%", limit),
+        ).fetchall()
+        # Merge and sort by created_at descending
+        combined = [dict(r) for r in voice_rows] + [dict(r) for r in note_rows]
+        combined.sort(key=lambda x: x["created_at"], reverse=True)
+        return combined[:limit]
     finally:
         conn.close()
 
@@ -478,6 +521,9 @@ def project_stats(project: str) -> dict:
         scans = conn.execute(
             "SELECT COUNT(*) FROM network_scans WHERE project = ?", (project,)
         ).fetchone()[0]
+        notes = conn.execute(
+            "SELECT COUNT(*) FROM quick_notes WHERE project = ?", (project,)
+        ).fetchone()[0]
         total_task_mins = conn.execute(
             "SELECT COALESCE(SUM(duration_minutes), 0) FROM tasks "
             "WHERE project = ? AND ended_at IS NOT NULL",
@@ -488,6 +534,7 @@ def project_stats(project: str) -> dict:
             "voice_notes": voices,
             "visits": visits,
             "scans": scans,
+            "quick_notes": notes,
             "total_task_hours": round(total_task_mins / 60, 1),
         }
     finally:

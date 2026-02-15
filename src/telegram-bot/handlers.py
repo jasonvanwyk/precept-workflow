@@ -10,10 +10,10 @@ All handlers receive (update, context) and use context.user_data for state:
 import logging
 import subprocess
 import tempfile
-from datetime import datetime
+from datetime import datetime, timedelta, time as dt_time
 from pathlib import Path
 
-from telegram import Update, ReplyKeyboardRemove
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update, ReplyKeyboardRemove
 from telegram.ext import ContextTypes, ConversationHandler
 
 import config
@@ -327,9 +327,14 @@ async def _show_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
     stats = db.project_stats(project)
     lines.append(
         f"\nDB: {stats['photos']} photos, {stats['voice_notes']} voice notes, "
-        f"{stats['visits']} visits, {stats['scans']} scans, "
-        f"{stats['total_task_hours']}h tracked"
+        f"{stats['quick_notes']} notes, {stats['visits']} visits, "
+        f"{stats['scans']} scans, {stats['total_task_hours']}h tracked"
     )
+
+    # Active task info
+    active_task = db.get_active_task(project)
+    if active_task:
+        lines.append(f"\nActive task: {active_task['description']} (since {active_task['started_at'][:16]})")
 
     text = "\n".join(lines)
     # Can't edit_message_text if it's too long, so use reply
@@ -497,6 +502,7 @@ async def _end_visit_handler(
                 f"## Summary\n\n"
                 f"- Photos: {summary_data['photo_count']}\n"
                 f"- Voice notes: {summary_data['voice_count']}\n"
+                f"- Quick notes: {summary_data['note_count']}\n"
                 f"- Tasks: {summary_data['task_count']}\n"
                 f"- Network scans: {summary_data['scan_count']}\n"
             )
@@ -638,11 +644,65 @@ async def quick_note_text(
         note_file.write_text(f"# Quick Notes -- {date_str}\n\n**{time_str}:** {note}\n")
 
     _git_commit(pp, note_file, f"Add quick note: {date_str}")
-    db.log_event("quick_note", note[:100], project)
+
+    # Log to DB
+    visit_id = _visit_id(context)
+    db.log_quick_note(project, note, visit_id)
 
     await update.message.reply_text(
         f"Note saved to {project}/correspondence/{note_file.name}",
         reply_markup=_reply_keyboard(context),
+    )
+    return MAIN_MENU
+
+
+async def note_save_callback(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
+    """Handle 'save as note' confirmation from outside-visit text."""
+    query = update.callback_query
+    await query.answer()
+
+    if query.data != "save_as_note":
+        await query.edit_message_text("Cancelled.")
+        return MAIN_MENU
+
+    note_text = context.user_data.pop("pending_note", "")
+    if not note_text:
+        await query.edit_message_text("Nothing to save.")
+        return MAIN_MENU
+
+    project = _project(context)
+    if not project:
+        await query.edit_message_text("No active project.")
+        return MAIN_MENU
+
+    pp = _project_path(context)
+
+    # Save to correspondence file
+    corr_dir = pp / "correspondence"
+    corr_dir.mkdir(exist_ok=True)
+    date_str = datetime.now().strftime(config.DATE_FORMAT)
+    time_str = datetime.now().strftime("%H:%M")
+
+    note_file = corr_dir / f"{date_str}_quick-note.md"
+    if note_file.exists():
+        existing = note_file.read_text()
+        note_file.write_text(f"{existing}\n**{time_str}:** {note_text}\n")
+    else:
+        note_file.write_text(
+            f"# Quick Notes -- {date_str}\n\n**{time_str}:** {note_text}\n"
+        )
+
+    _git_commit(pp, note_file, f"Add quick note: {date_str}")
+    db.log_quick_note(project, note_text)
+
+    await query.edit_message_text(
+        f"Note saved to {project}/correspondence/{note_file.name}"
+    )
+    await query.message.reply_text(
+        _main_menu_text(context),
+        reply_markup=menus.main_menu_keyboard(project),
     )
     return MAIN_MENU
 
@@ -655,32 +715,32 @@ async def quick_note_text(
 async def search_query_text(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> int:
-    """Search voice transcripts for a keyword."""
+    """Search voice transcripts and quick notes for a keyword."""
     query_text = update.message.text.strip()
     results = db.search_transcripts(query_text)
 
     if not results:
         await update.message.reply_text(
-            f"No transcripts matching '{query_text}'.",
+            f"No results matching '{query_text}'.",
             reply_markup=_reply_keyboard(context),
         )
         return MAIN_MENU
 
     lines = [f"Found {len(results)} result(s) for '{query_text}':\n"]
     for r in results:
-        # Show a snippet around the match
-        transcript = r["transcript"] or ""
-        idx = transcript.lower().find(query_text.lower())
+        text_content = r.get("text") or ""
+        source_tag = r.get("source", "voice")
+        idx = text_content.lower().find(query_text.lower())
         start = max(0, idx - 40)
-        end = min(len(transcript), idx + len(query_text) + 40)
-        snippet = transcript[start:end]
+        end = min(len(text_content), idx + len(query_text) + 40)
+        snippet = text_content[start:end]
         if start > 0:
             snippet = "..." + snippet
-        if end < len(transcript):
+        if end < len(text_content):
             snippet = snippet + "..."
 
         lines.append(
-            f"[{r['project']}] {r['created_at'][:10]}\n"
+            f"[{r['project']}] {r['created_at'][:10]} ({source_tag})\n"
             f"  {snippet}\n"
         )
 
@@ -841,6 +901,10 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
 # ---------------------------------------------------------------------------
 
 
+MAX_FILE_SIZE_MB = 100
+BLOCKED_EXTENSIONS = {".exe", ".bat", ".cmd", ".ps1", ".sh"}
+
+
 async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Save any document sent via Telegram to the project and log in DB."""
     pp = _project_path(context)
@@ -853,7 +917,28 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
     project = _project(context)
     doc = update.message.document
+
+    # File size check
+    if doc.file_size and doc.file_size > MAX_FILE_SIZE_MB * 1024 * 1024:
+        db.log_event("file_rejected", f"Too large: {doc.file_size} bytes", project)
+        await update.message.reply_text(
+            f"File too large (max {MAX_FILE_SIZE_MB}MB).",
+            reply_markup=_reply_keyboard(context),
+        )
+        return MAIN_MENU
+
     original_name = doc.file_name or "document"
+
+    # Dangerous extension check
+    ext = Path(original_name).suffix.lower()
+    if ext in BLOCKED_EXTENSIONS:
+        db.log_event("file_rejected", f"Blocked extension: {ext}", project)
+        await update.message.reply_text(
+            f"File type {ext} not allowed.",
+            reply_markup=_reply_keyboard(context),
+        )
+        return MAIN_MENU
+
     date_str = datetime.now().strftime(config.DATE_FORMAT)
 
     # Determine destination based on file type
@@ -921,12 +1006,29 @@ async def reply_keyboard_handler(
     if text == "start task":
         return await _start_task_text(update, context)
 
-    # Fallback: treat as quick note if in visit, otherwise show menu
+    # Fallback: treat as quick note if in visit
     if _visit_id(context):
-        # During a visit, unrecognized text becomes a quick note
         return await quick_note_text(update, context)
 
-    return await cmd_start(update, context)
+    # Outside visit: offer to save as quick note if project is set
+    project = _project(context)
+    if project:
+        context.user_data["pending_note"] = update.message.text.strip()
+        await update.message.reply_text(
+            f'Save as quick note to {project}?',
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("Yes, save", callback_data="save_as_note")],
+                [InlineKeyboardButton("No, cancel", callback_data="noop")],
+            ]),
+        )
+        return MAIN_MENU
+
+    # No project set
+    await update.message.reply_text(
+        "Set a project first to save notes.",
+        reply_markup=menus.main_menu_keyboard(),
+    )
+    return MAIN_MENU
 
 
 async def _status_text_handler(
@@ -956,9 +1058,14 @@ async def _status_text_handler(
     stats = db.project_stats(project)
     lines.append(
         f"\nDB: {stats['photos']} photos, {stats['voice_notes']} voice notes, "
-        f"{stats['visits']} visits, {stats['scans']} scans, "
-        f"{stats['total_task_hours']}h tracked"
+        f"{stats['quick_notes']} notes, {stats['visits']} visits, "
+        f"{stats['scans']} scans, {stats['total_task_hours']}h tracked"
     )
+
+    # Active task info
+    active_task = db.get_active_task(project)
+    if active_task:
+        lines.append(f"\nActive task: {active_task['description']} (since {active_task['started_at'][:16]})")
 
     await _send_long(update, "\n".join(lines), reply_markup=_reply_keyboard(context))
     return MAIN_MENU
@@ -1007,6 +1114,7 @@ async def _end_visit_text(
                 f"## Summary\n\n"
                 f"- Photos: {summary_data['photo_count']}\n"
                 f"- Voice notes: {summary_data['voice_count']}\n"
+                f"- Quick notes: {summary_data['note_count']}\n"
                 f"- Tasks: {summary_data['task_count']}\n"
                 f"- Network scans: {summary_data['scan_count']}\n"
             )
@@ -1215,6 +1323,121 @@ async def cmd_visits(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
             lines.append(f"  {v['summary'][:80]}")
 
     await _send_long(update, "\n".join(lines), reply_markup=_reply_keyboard(context))
+    return MAIN_MENU
+
+
+# ---------------------------------------------------------------------------
+# Daily reminders
+# ---------------------------------------------------------------------------
+
+
+async def morning_briefing(context: ContextTypes.DEFAULT_TYPE):
+    """7:30 AM SAST daily briefing."""
+    if not context.bot_data.get("reminders_enabled", True):
+        return
+
+    # Use stored project or skip
+    project = context.bot_data.get("reminder_project")
+    if not project:
+        return
+
+    stats = db.project_stats(project)
+    active_task = db.get_active_task(project)
+    active_visit = db.get_active_visit(project)
+
+    # Recent activity from last 24 hours
+    events = db.recent_activity(limit=20)
+    yesterday = (datetime.now() - timedelta(hours=24)).isoformat()
+    recent = [e for e in events if e["created_at"] >= yesterday]
+
+    lines = [f"Good morning. Daily briefing for {project}:\n"]
+    lines.append(
+        f"Photos: {stats['photos']}, Voice notes: {stats['voice_notes']}, "
+        f"Notes: {stats['quick_notes']}, Visits: {stats['visits']}, "
+        f"Scans: {stats['scans']}, Time tracked: {stats['total_task_hours']}h"
+    )
+
+    if active_task:
+        lines.append(f"\nActive task: {active_task['description']} (started {active_task['started_at'][:16]})")
+    if active_visit:
+        loc = active_visit.get("location") or "no location"
+        lines.append(f"\nVisit in progress: {loc} (started {active_visit['started_at'][:16]})")
+
+    if recent:
+        lines.append(f"\nLast 24h: {len(recent)} events")
+    else:
+        lines.append("\nNo activity in the last 24 hours.")
+
+    await context.bot.send_message(
+        chat_id=config.ALLOWED_USER_ID,
+        text="\n".join(lines),
+    )
+
+
+async def afternoon_wrapup(context: ContextTypes.DEFAULT_TYPE):
+    """4:30 PM SAST afternoon wrap-up."""
+    if not context.bot_data.get("reminders_enabled", True):
+        return
+
+    project = context.bot_data.get("reminder_project")
+    if not project:
+        return
+
+    stats = db.project_stats(project)
+    active_task = db.get_active_task(project)
+
+    # Today's activity
+    events = db.recent_activity(limit=30)
+    today = datetime.now().strftime("%Y-%m-%d")
+    todays = [e for e in events if e["created_at"].startswith(today)]
+
+    lines = [f"Afternoon wrap-up for {project}:\n"]
+
+    if todays:
+        lines.append(f"Today: {len(todays)} events")
+        for e in todays[:10]:
+            tag = f" [{e['project']}]" if e["project"] and e["project"] != project else ""
+            lines.append(f"  {e['created_at'][11:16]} {e['event_type']}{tag}")
+    else:
+        lines.append("No activity today.")
+
+    if active_task:
+        lines.append(f"\nReminder: task still running -- {active_task['description']}")
+
+    # Visit summaries from today
+    visits = db.visit_history(project, limit=5)
+    todays_visits = [v for v in visits if v["started_at"].startswith(today)]
+    if todays_visits:
+        lines.append(f"\nVisits today: {len(todays_visits)}")
+        for v in todays_visits:
+            loc = v["location"] or "no location"
+            status = "active" if not v["ended_at"] else "completed"
+            lines.append(f"  {loc} -- {status}")
+
+    await context.bot.send_message(
+        chat_id=config.ALLOWED_USER_ID,
+        text="\n".join(lines),
+    )
+
+
+async def cmd_reminders(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle /reminders -- toggle daily reminders on/off."""
+    current = context.bot_data.get("reminders_enabled", True)
+
+    # Toggle
+    context.bot_data["reminders_enabled"] = not current
+    new_state = "on" if not current else "off"
+
+    # Store current project for reminders
+    project = _project(context)
+    if project and not current:
+        context.bot_data["reminder_project"] = project
+
+    await update.message.reply_text(
+        f"Daily reminders: {new_state}"
+        + (f" (project: {project})" if project and not current else ""),
+        reply_markup=_reply_keyboard(context),
+    )
     return MAIN_MENU
 
 

@@ -1,6 +1,6 @@
 # Project Status - Precept Workflow
 
-**Last Updated:** 2026-02-16
+**Last Updated:** 2026-02-15
 **Project Metadata:** See `project.yml`
 
 ---
@@ -46,22 +46,28 @@ Setting up MCP servers, credentials, and mobile tools so that all Precept projec
 | Write AI services strategy | 2026-02-11 | See docs/ai-services-strategy.md -- 4-tier service offering, SaaS repricing analysis, Anthropic Console delivery toolkit |
 | Telegram bot live | 2026-02-15 | @preceptserver_bot -- secrets configured, lingering enabled, photo filing + voice transcription + project commands all tested |
 | Bot upgrade: SQLite + menus + visits + laptop tools | 2026-02-15 | db.py, menus.py, handlers.py, register-scan.py, precept-scan.sh -- full refactor with ConversationHandler, inline keyboards, site visits, task timer, document handler, search |
+| Bot v2: security hardening | 2026-02-15 | Command injection fix (precept-scan.sh), path traversal fix (register-scan.py), file upload limits (100MB, blocked extensions), rate limiting (30/min) |
+| Bot v2: text message handling + quick notes DB | 2026-02-15 | quick_notes table, outside-visit text prompts save confirmation, search includes notes |
+| Bot v2: daily reminders | 2026-02-15 | 07:30 morning briefing + 16:30 afternoon wrap-up via JobQueue, /reminders toggle |
+| Bot v2: status enrichment | 2026-02-15 | Quick notes count + active task info in /status output, note count in visit summaries |
 
 ### In Progress
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Bot upgrade: deploy + test | Needs deploy | SQLite + menus + visits + tasks + laptop tools all coded, needs deploy to dev server and testing |
+| Bot v2: deploy + test | Needs deploy | All v2 features coded, needs deploy to dev server and testing from iPhone |
 
 ### Planned
 
 | Task | Status | Notes |
 |------|--------|-------|
+| Install precept-scan on laptop | TODO | `sudo cp precept-scan.sh /usr/local/bin/precept-scan` on jason@10.0.10.112 |
 | Template integration (Phase 2) | TODO | Add slash commands, project.yml schema |
 | Anthropic Console setup | TODO | Prompt Generator, Workbench, Evaluations -- delivery toolkit for client work |
 | Build internal workflow automations | TODO | 2-3 automations as case studies and templates for client deployments |
 | Package AI service offering | TODO | Proposal templates, pricing for 4 tiers, scope definitions |
 | Pilot with 1-2 existing clients | TODO | Start with Tier 1 audit, then Tier 2 build for highest-value workflows |
+| CrewAI POC: automated site visit reports | Future | Multi-agent report generation from photos + metrics |
 
 ---
 
@@ -76,3 +82,5 @@ Setting up MCP servers, credentials, and mobile tools so that all Precept projec
 7. Environment variables for secrets (not .env files)
 8. iOS (not Android) -- Telegram, LocalSend, Termius on iPhone
 9. SQLite for structured operational data (not vector DB) -- RAG unnecessary at current doc scale, Claude Code reads files directly
+10. Skip LangChain/LangGraph/AutoGen -- current ConversationHandler is lean enough; revisit if workflows become non-linear
+11. CrewAI worth POC for automated site visit report generation -- low cost (~$5-10/month for 100 photos)

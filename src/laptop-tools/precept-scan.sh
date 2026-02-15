@@ -26,6 +26,8 @@ REGISTER_SCRIPT="precept-workflow/src/telegram-bot/register-scan.py"
 DB_PATH="\$HOME/.config/precept/precept.db"
 DATE=$(date +%Y-%m-%d)
 
+SSH_OPTS=(-o StrictHostKeyChecking=accept-new -o ConnectTimeout=5)
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -51,6 +53,10 @@ safe_name() {
     echo "$1" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9_-]/-/g' | sed 's/--*/-/g'
 }
 
+validate_project() {
+    [[ "$1" =~ ^[a-zA-Z0-9_-]+$ ]] || die "Invalid project name: $1 (only letters, numbers, hyphens, underscores)"
+}
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -61,34 +67,36 @@ SCAN_TYPE="$1"
 PROJECT="$2"
 shift 2
 
+validate_project "$PROJECT"
+
 PROJECT_DIR="$PROJECTS_DIR/$PROJECT"
 NETWORK_DIR="$PROJECT_DIR/docs/network"
 mkdir -p "$NETWORK_DIR"
 
 case "$SCAN_TYPE" in
     nmap)
-        ARGS="$*"
-        DESC=$(safe_name "$(echo "$ARGS" | head -c 40)")
+        IFS=' ' read -ra args <<< "$*"
+        DESC=$(safe_name "$(echo "$*" | head -c 40)")
         OUTFILE="$NETWORK_DIR/${DATE}-nmap-${DESC}.txt"
-        echo "Running: nmap $ARGS"
+        echo "Running: nmap ${args[*]}"
         echo "Output: $OUTFILE"
         echo "--- nmap scan: $DATE ---" > "$OUTFILE"
-        echo "Command: nmap $ARGS" >> "$OUTFILE"
+        echo "Command: nmap ${args[*]}" >> "$OUTFILE"
         echo "---" >> "$OUTFILE"
-        nmap $ARGS >> "$OUTFILE" 2>&1 || true
+        nmap "${args[@]}" >> "$OUTFILE" 2>&1 || true
         echo "Scan complete."
         ;;
 
     iperf3)
-        ARGS="$*"
-        DESC=$(safe_name "$(echo "$ARGS" | head -c 40)")
+        IFS=' ' read -ra args <<< "$*"
+        DESC=$(safe_name "$(echo "$*" | head -c 40)")
         OUTFILE="$NETWORK_DIR/${DATE}-iperf3-${DESC}.txt"
-        echo "Running: iperf3 $ARGS"
+        echo "Running: iperf3 ${args[*]}"
         echo "Output: $OUTFILE"
         echo "--- iperf3 test: $DATE ---" > "$OUTFILE"
-        echo "Command: iperf3 $ARGS" >> "$OUTFILE"
+        echo "Command: iperf3 ${args[*]}" >> "$OUTFILE"
         echo "---" >> "$OUTFILE"
-        iperf3 $ARGS >> "$OUTFILE" 2>&1 || true
+        iperf3 "${args[@]}" >> "$OUTFILE" 2>&1 || true
         echo "Test complete."
         ;;
 
@@ -119,15 +127,15 @@ fi
 # SCP to dev server
 REMOTE_PROJECT_DIR="$PROJECTS_DIR/$PROJECT"
 echo "Copying to dev server..."
-ssh "$DEV_USER@$DEV_SERVER" "mkdir -p '$REMOTE_PROJECT_DIR/docs/network'" 2>/dev/null || true
-scp "$OUTFILE" "$DEV_USER@$DEV_SERVER:$REMOTE_PROJECT_DIR/docs/network/" 2>/dev/null && echo "Copied." || echo "SCP failed (dev server unreachable?)."
+ssh "${SSH_OPTS[@]}" "$DEV_USER@$DEV_SERVER" "mkdir -p '$REMOTE_PROJECT_DIR/docs/network'" 2>/dev/null || true
+scp "${SSH_OPTS[@]}" "$OUTFILE" "$DEV_USER@$DEV_SERVER:$REMOTE_PROJECT_DIR/docs/network/" 2>/dev/null && echo "Copied." || echo "SCP failed (dev server unreachable?)."
 
 # Register in SQLite via SSH
 echo "Registering in database..."
 REMOTE_FILE="$REMOTE_PROJECT_DIR/docs/network/$(basename "$OUTFILE")"
-ssh "$DEV_USER@$DEV_SERVER" "python3 ~/Projects/$REGISTER_SCRIPT '$PROJECT' '$SCAN_TYPE' '$REMOTE_FILE'" 2>/dev/null && echo "Registered." || echo "DB registration failed."
+ssh "${SSH_OPTS[@]}" "$DEV_USER@$DEV_SERVER" "python3 ~/Projects/$REGISTER_SCRIPT '$PROJECT' '$SCAN_TYPE' '$REMOTE_FILE'" 2>/dev/null && echo "Registered." || echo "DB registration failed."
 
 # Git commit on dev server too
-ssh "$DEV_USER@$DEV_SERVER" "cd '$REMOTE_PROJECT_DIR' && git add 'docs/network/$(basename "$OUTFILE")' && git commit -m 'Add ${SCAN_TYPE} scan: $(basename "$OUTFILE")'" 2>/dev/null || true
+ssh "${SSH_OPTS[@]}" "$DEV_USER@$DEV_SERVER" "cd '$REMOTE_PROJECT_DIR' && git add 'docs/network/$(basename "$OUTFILE")' && git commit -m 'Add ${SCAN_TYPE} scan: $(basename "$OUTFILE")'" 2>/dev/null || true
 
 echo "Done: $OUTFILE"
