@@ -2,9 +2,9 @@
 
 ## Right Now
 **Phase:** Phase 2 IN PROGRESS -- Telegram bot + AI services strategy
-**Last:** Added SQLite database to plan for bot operational data (2026-02-14)
-**Next:** Jason provides bot token + OpenAI key + user ID, then start service and test; after bot is live, add SQLite
-**Blocked:** Waiting on 3 secrets (TELEGRAM_BOT_TOKEN, OPENAI_API_KEY, ALLOWED_USER_ID)
+**Last:** Telegram bot fully operational -- all features tested (2026-02-15)
+**Next:** Add SQLite operational database; Anthropic Console setup
+**Blocked:** Nothing
 
 ## Quick Context
 - Internal tooling project for Precept Systems
@@ -17,6 +17,8 @@
 - SSH key auth configured: desktop → dev server
 
 ## Recent Progress
+- Telegram bot live and tested (2026-02-15) -- @preceptserver_bot, photo filing, voice transcription (Whisper), project/status commands
+- SQLite operational database added to roadmap (structured data, not vector DB)
 - AI services strategy doc written (docs/ai-services-strategy.md) -- defines 4-tier service offering for AI workflow transformation, covers the $285B SaaS repricing, KPMG precedent, Anthropic Developer Console toolkit
 - Telegram bot code written: src/telegram-bot/ (bot.py, config.py, requirements.txt)
 - Bot deployed to dev server (repo cloned, venv, systemd service installed)
@@ -73,9 +75,9 @@
 - [x] Bot code written (src/telegram-bot/)
 - [x] Bot deployed to dev server (repo cloned, venv, systemd service installed)
 - [x] AI services strategy document written
-- [ ] Create Telegram bot via @BotFather + provide secrets
-- [ ] Start service and test from iPhone
-- [ ] Enable lingering on dev server (sudo)
+- [x] Create Telegram bot via @BotFather + provide secrets
+- [x] Start service and test from iPhone
+- [x] Enable lingering on dev server (sudo)
 - [ ] Add SQLite database (bot event log, photo metadata, task/time tracking, client touchpoints)
 - [ ] Anthropic Console setup (Prompt Generator, Workbench, Evaluations)
 - [ ] Build internal workflow automations (case studies)

@@ -1,6 +1,6 @@
 # Project Status - Precept Workflow
 
-**Last Updated:** 2026-02-11
+**Last Updated:** 2026-02-15
 **Project Metadata:** See `project.yml`
 
 ---
@@ -44,12 +44,13 @@ Setting up MCP servers, credentials, and mobile tools so that all Precept projec
 | Desktop SSH via Cloudflare Tunnel | 2026-02-08 | ProxyCommand in ~/.ssh/config, ssh jason@ssh.meter-tracker.com works |
 | Laptop setup (jason-laptop, 10.0.10.112) | 2026-02-08 | Cloudflare Tunnel SSH + network diagnostic tools (nmap, wireshark, wavemon, iperf3, etc.) |
 | Write AI services strategy | 2026-02-11 | See docs/ai-services-strategy.md -- 4-tier service offering, SaaS repricing analysis, Anthropic Console delivery toolkit |
+| Telegram bot live | 2026-02-15 | @preceptserver_bot -- secrets configured, lingering enabled, photo filing + voice transcription + project commands all tested |
 
 ### In Progress
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Build Telegram bot (Phase 2) | In Progress | Code written, deployed to dev server, awaiting bot token + secrets from Jason |
+| Build Telegram bot (Phase 2) | Complete | Bot live @preceptserver_bot -- photo filing, voice transcription, project/status commands all tested |
 
 ### Planned
 
