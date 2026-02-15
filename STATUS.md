@@ -1,6 +1,6 @@
 # Project Status - Precept Workflow
 
-**Last Updated:** 2026-02-15
+**Last Updated:** 2026-02-16
 **Project Metadata:** See `project.yml`
 
 ---
@@ -45,18 +45,18 @@ Setting up MCP servers, credentials, and mobile tools so that all Precept projec
 | Laptop setup (jason-laptop, 10.0.10.112) | 2026-02-08 | Cloudflare Tunnel SSH + network diagnostic tools (nmap, wireshark, wavemon, iperf3, etc.) |
 | Write AI services strategy | 2026-02-11 | See docs/ai-services-strategy.md -- 4-tier service offering, SaaS repricing analysis, Anthropic Console delivery toolkit |
 | Telegram bot live | 2026-02-15 | @preceptserver_bot -- secrets configured, lingering enabled, photo filing + voice transcription + project commands all tested |
+| Bot upgrade: SQLite + menus + visits + laptop tools | 2026-02-15 | db.py, menus.py, handlers.py, register-scan.py, precept-scan.sh -- full refactor with ConversationHandler, inline keyboards, site visits, task timer, document handler, search |
 
 ### In Progress
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Build Telegram bot (Phase 2) | Complete | Bot live @preceptserver_bot -- photo filing, voice transcription, project/status commands all tested |
+| Bot upgrade: deploy + test | Needs deploy | SQLite + menus + visits + tasks + laptop tools all coded, needs deploy to dev server and testing |
 
 ### Planned
 
 | Task | Status | Notes |
 |------|--------|-------|
-| SQLite operational database | TODO | Bot event log, photo metadata, task/time tracking, client touchpoints -- queryable by bot and Claude Code |
 | Template integration (Phase 2) | TODO | Add slash commands, project.yml schema |
 | Anthropic Console setup | TODO | Prompt Generator, Workbench, Evaluations -- delivery toolkit for client work |
 | Build internal workflow automations | TODO | 2-3 automations as case studies and templates for client deployments |

@@ -14,6 +14,11 @@ ALLOWED_USER_ID = int(os.environ.get("ALLOWED_USER_ID", "0"))
 
 PROJECTS_DIR = Path(os.environ.get("PROJECTS_DIR", str(Path.home() / "Projects")))
 
+# SQLite database path
+DB_PATH = Path(
+    os.environ.get("PRECEPT_DB_PATH", str(Path.home() / ".config/precept/precept.db"))
+)
+
 # Telegram message length limit
 MAX_MESSAGE_LENGTH = 4096
 
