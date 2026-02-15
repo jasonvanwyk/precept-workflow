@@ -27,6 +27,7 @@ MENU_START_TASK = f"{MENU_CB}start_task"
 MENU_SEARCH = f"{MENU_CB}search"
 MENU_RECENT = f"{MENU_CB}recent"
 MENU_MAIN = f"{MENU_CB}main"
+MENU_NEW_PROJECT = f"{MENU_CB}new_project"
 
 # Visit actions
 VISIT_CONFIRM = f"{VISIT_CB}confirm"
@@ -106,8 +107,11 @@ def project_list_keyboard(
             nav.append(InlineKeyboardButton("Next >>", callback_data=f"{PAGE_CB}{page + 1}"))
         rows.append(nav)
 
-    # Back to menu
-    rows.append([InlineKeyboardButton("<< Back to menu", callback_data=MENU_MAIN)])
+    # New project + back to menu
+    rows.append([
+        InlineKeyboardButton("+ New project", callback_data=MENU_NEW_PROJECT),
+        InlineKeyboardButton("<< Back", callback_data=MENU_MAIN),
+    ])
 
     return InlineKeyboardMarkup(rows)
 

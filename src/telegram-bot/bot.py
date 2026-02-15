@@ -122,7 +122,7 @@ def main():
                 CallbackQueryHandler(handlers.task_callback, pattern=f"^{menus.TASK_CB}"),
                 CallbackQueryHandler(handlers.project_callback, pattern=f"^({menus.PROJECT_CB}|{menus.PAGE_CB})"),
                 CallbackQueryHandler(handlers.note_save_callback, pattern="^save_as_note$"),
-                CallbackQueryHandler(lambda u, c: handlers.MAIN_MENU, pattern="^noop$"),
+                CallbackQueryHandler(handlers.noop_callback, pattern="^noop$"),
                 # Slash commands (legacy fallbacks)
                 CommandHandler("project", handlers.cmd_project, AUTH),
                 CommandHandler("projects", handlers.cmd_projects, AUTH),
@@ -144,11 +144,16 @@ def main():
                 MessageHandler(AUTH & filters.TEXT & ~filters.COMMAND, handlers.reply_keyboard_handler),
             ],
             handlers.SELECT_PROJECT: [
-                CallbackQueryHandler(handlers.project_callback, pattern=f"^({menus.PROJECT_CB}|{menus.PAGE_CB}|{menus.MENU_CB})"),
-                CallbackQueryHandler(lambda u, c: handlers.MAIN_MENU, pattern="^noop$"),
+                CallbackQueryHandler(handlers.project_callback, pattern=f"^({menus.PROJECT_CB}|{menus.PAGE_CB})"),
+                CallbackQueryHandler(handlers.menu_callback, pattern=f"^{menus.MENU_CB}"),
+                CallbackQueryHandler(handlers.noop_callback, pattern="^noop$"),
                 CommandHandler("cancel", handlers.cancel, AUTH),
                 # Allow typing a project name too
                 MessageHandler(AUTH & filters.TEXT & ~filters.COMMAND, handlers.project_name_text),
+            ],
+            handlers.NEW_PROJECT: [
+                MessageHandler(AUTH & filters.TEXT & ~filters.COMMAND, handlers.new_project_text),
+                CommandHandler("cancel", handlers.cancel, AUTH),
             ],
             handlers.VISIT_LOCATION: [
                 CallbackQueryHandler(handlers.visit_callback, pattern=f"^{menus.VISIT_CB}"),

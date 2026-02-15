@@ -199,8 +199,8 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         await _show_recent_activity(update, context)
         return MAIN_MENU
 
-    if data == "noop":
-        return MAIN_MENU
+    if data == menus.MENU_NEW_PROJECT:
+        return await new_project_prompt(update, context)
 
     return MAIN_MENU
 
@@ -287,6 +287,93 @@ async def _back_to_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     text = _main_menu_text(context)
     await query.edit_message_text(
         text, reply_markup=menus.main_menu_keyboard(_project(context))
+    )
+    return MAIN_MENU
+
+
+async def noop_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle noop/cancel callbacks -- dismiss the prompt and return to menu."""
+    query = update.callback_query
+    await query.answer()
+    # Clear pending note if any
+    context.user_data.pop("pending_note", None)
+    await query.edit_message_text("Cancelled.")
+    return MAIN_MENU
+
+
+# ---------------------------------------------------------------------------
+# New project
+# ---------------------------------------------------------------------------
+
+
+async def new_project_prompt(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
+    """Ask for a new project name."""
+    query = update.callback_query
+    await query.answer()
+    await query.edit_message_text(
+        "Type a name for the new project:\n"
+        "(lowercase, hyphens or underscores, e.g. smith-network)\n\n"
+        "/cancel to go back"
+    )
+    return NEW_PROJECT
+
+
+async def new_project_text(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
+    """Create a new project directory from typed name."""
+    import re
+
+    name = update.message.text.strip()
+
+    # Validate name
+    if not re.match(r'^[a-z0-9][a-z0-9_-]*$', name):
+        await update.message.reply_text(
+            "Invalid name -- use lowercase letters, numbers, hyphens, underscores.\n"
+            "Try again or /cancel.",
+            reply_markup=_reply_keyboard(context),
+        )
+        return NEW_PROJECT
+
+    project_dir = config.PROJECTS_DIR / name
+    if project_dir.exists():
+        # Project already exists -- just switch to it
+        context.user_data["active_project"] = name
+        db.log_event("project_switched", name)
+        await update.message.reply_text(
+            f"Project already exists. Switched to: {name}",
+            reply_markup=_reply_keyboard(context),
+        )
+        await update.message.reply_text(
+            _main_menu_text(context),
+            reply_markup=menus.main_menu_keyboard(name),
+        )
+        return MAIN_MENU
+
+    # Create project directory with standard structure
+    project_dir.mkdir(parents=True)
+    (project_dir / "docs").mkdir()
+    (project_dir / "pics").mkdir()
+    (project_dir / "correspondence").mkdir()
+
+    # Initialise git repo
+    subprocess.run(["git", "init"], cwd=project_dir, capture_output=True)
+    logger.info("Created new project: %s", name)
+
+    context.user_data["active_project"] = name
+    db.log_event("project_created", name)
+
+    await update.message.reply_text(
+        f"Project created: {name}\n"
+        f"Folders: docs/, pics/, correspondence/\n"
+        f"Git repo initialised.",
+        reply_markup=_reply_keyboard(context),
+    )
+    await update.message.reply_text(
+        _main_menu_text(context),
+        reply_markup=menus.main_menu_keyboard(name),
     )
     return MAIN_MENU
 
