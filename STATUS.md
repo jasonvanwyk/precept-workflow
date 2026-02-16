@@ -50,6 +50,7 @@ Setting up MCP servers, credentials, and mobile tools so that all Precept projec
 | Bot v2: text message handling + quick notes DB | 2026-02-15 | quick_notes table, outside-visit text prompts save confirmation, search includes notes |
 | Bot v2: daily reminders | 2026-02-15 | 07:30 morning briefing + 16:30 afternoon wrap-up via JobQueue, /reminders toggle |
 | Bot v2: status enrichment | 2026-02-15 | Quick notes count + active task info in /status output, note count in visit summaries |
+| Precept Field PWA: scaffold | 2026-02-16 | Separate repo (precept-field) -- FastAPI backend, PWA frontend, SQLite (ported from bot), offline sync, deploy config. 35 files, pushed to GitHub |
 
 ### In Progress
 
@@ -61,7 +62,7 @@ Setting up MCP servers, credentials, and mobile tools so that all Precept projec
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Precept Field PWA: deploy + test | TODO | Separate repo scaffolded (~/Projects/precept-field), needs GitHub repo creation, deploy to dev server, DNS + Cloudflare Tunnel |
+| Precept Field PWA: deploy + test | TODO | Repo on GitHub (jasonvanwyk/precept-field), needs deploy to dev server, DNS + Cloudflare Tunnel, app icons |
 | Install precept-scan on laptop | TODO | `sudo cp precept-scan.sh /usr/local/bin/precept-scan` on jason@10.0.10.112 |
 | Template integration (Phase 2) | TODO | Add slash commands, project.yml schema |
 | Anthropic Console setup | TODO | Prompt Generator, Workbench, Evaluations -- delivery toolkit for client work |
@@ -85,3 +86,4 @@ Setting up MCP servers, credentials, and mobile tools so that all Precept projec
 9. SQLite for structured operational data (not vector DB) -- RAG unnecessary at current doc scale, Claude Code reads files directly
 10. Skip LangChain/LangGraph/AutoGen -- current ConversationHandler is lean enough; revisit if workflows become non-linear
 11. CrewAI worth POC for automated site visit report generation -- low cost (~$5-10/month for 100 photos)
+12. Precept Field PWA in separate repo (precept-field) -- Vanilla JS frontend (no framework), same SQLite schema as bot (separate DB file), Cloudflare Access + API key auth
