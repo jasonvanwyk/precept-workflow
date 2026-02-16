@@ -1,6 +1,6 @@
 # Project Status - Precept Workflow
 
-**Last Updated:** 2026-02-15
+**Last Updated:** 2026-02-16
 **Project Metadata:** See `project.yml`
 
 ---
@@ -61,6 +61,7 @@ Setting up MCP servers, credentials, and mobile tools so that all Precept projec
 
 | Task | Status | Notes |
 |------|--------|-------|
+| Precept Field PWA: deploy + test | TODO | Separate repo scaffolded (~/Projects/precept-field), needs GitHub repo creation, deploy to dev server, DNS + Cloudflare Tunnel |
 | Install precept-scan on laptop | TODO | `sudo cp precept-scan.sh /usr/local/bin/precept-scan` on jason@10.0.10.112 |
 | Template integration (Phase 2) | TODO | Add slash commands, project.yml schema |
 | Anthropic Console setup | TODO | Prompt Generator, Workbench, Evaluations -- delivery toolkit for client work |
